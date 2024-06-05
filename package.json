@@ -1,0 +1,19 @@
+{
+  "name": "chrowser",
+  "version": "1.0.0",
+  "description": "A simple library to work on chrommium and scrape using it over cdp session",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Pooria",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.7.2",
+    "chrome-launcher": "^1.1.1",
+    "chrome-remote-interface": "^0.33.0"
+  },
+  "devDependencies": {
+    "@types/chrome-remote-interface": "^0.31.14"
+  }
+}
