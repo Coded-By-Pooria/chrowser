@@ -1,4 +1,4 @@
-import { TabOperations } from './tabHelper';
+import { TabSessionZoneMaker } from './tabHelper';
 import { sleep } from '../utils';
 
 export interface TabMouseBaseOptions {
@@ -7,7 +7,7 @@ export interface TabMouseBaseOptions {
 }
 
 export default class TabMouseHandler {
-  constructor(private tabId: string, private tabHelper: TabOperations) {}
+  constructor(private tabId: string, private tabHelper: TabSessionZoneMaker) {}
 
   async move(options: TabMouseBaseOptions) {
     this.tabHelper.sessionZone(this.tabId, async ({ Input }) => {

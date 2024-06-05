@@ -24,4 +24,8 @@ export default class Tab {
   get mouseHandler() {
     return (this._mouseHandler ??= this.helper.provideMouseHandler(this.tabId));
   }
+
+  close() {
+    return this.helper.close(this.tabId);
+  }
 }

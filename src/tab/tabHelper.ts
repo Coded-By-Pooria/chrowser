@@ -6,15 +6,18 @@ import { EvaluateException } from '../exceptions/evaluateException';
 import type TabNavigationOptions from './tabNavigationOptions';
 import NavigationException from '../exceptions/navigationException';
 
-export interface TabOperations {
+export interface TabSessionZoneMaker {
   sessionZone<T>(
     tabId: string,
     callback: (session: CDP.Client) => Promise<T>
   ): Promise<T>;
 }
 
-export class TabHelper implements TabHandlerInterface, TabOperations {
-  constructor(private chromeSessionPort: number) {}
+export class TabHelper implements TabHandlerInterface, TabSessionZoneMaker {
+  constructor(
+    private chromeSessionPort: number,
+    private onClose?: (tabId: string) => Promise<void>
+  ) {}
 
   provideMouseHandler(tabId: string) {
     return new TabMouseHandler(tabId, this);
@@ -105,5 +108,10 @@ export class TabHelper implements TabHandlerInterface, TabOperations {
     }
 
     return result.result.value;
+  }
+
+  async close(tabId: string): Promise<void> {
+    await CDP.Close({ id: tabId, port: this.chromeSessionPort });
+    this.onClose?.(tabId);
   }
 }

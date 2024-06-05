@@ -8,7 +8,7 @@ import { sleep } from '../src/utils';
     browser = await Browser.create();
     const tab1 = await browser.newTab();
     const tab1NavProm = tab1.navigate({
-      url: 'https://bot.sannysoft.com',
+      url: 'https://example.com/',
       waitUntil: 'load',
     });
 
@@ -16,7 +16,7 @@ import { sleep } from '../src/utils';
 
     const tab2 = await browser.newTab();
     const tab2NavProm = await tab2.navigate({
-      url: 'https://blogfa.com',
+      url: 'https://google.com',
       waitUntil: 'documentloaded',
     });
 

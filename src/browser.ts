@@ -38,4 +38,8 @@ export default class Browser implements TabHandlerInterface {
   close() {
     this.window.kill();
   }
+
+  getAllOpenTabs() {
+    return this.tabHandler.getAllTabs();
+  }
 }
