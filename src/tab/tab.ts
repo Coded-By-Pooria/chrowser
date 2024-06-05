@@ -28,4 +28,8 @@ export default class Tab {
   close() {
     return this.helper.close(this.tabId);
   }
+
+  addScriptToRunOnNewDocument(script: string | TabEvaluateFunction) {
+    return this.helper.addScriptToRunOnNewDocument(script, this.tabId);
+  }
 }

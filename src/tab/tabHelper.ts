@@ -5,6 +5,7 @@ import Tab, { type TabEvaluateFunction } from './tab';
 import { EvaluateException } from '../exceptions/evaluateException';
 import type TabNavigationOptions from './tabNavigationOptions';
 import NavigationException from '../exceptions/navigationException';
+import { evaluationSctriptProvider } from './helper';
 
 export interface TabSessionZoneMaker {
   sessionZone<T>(
@@ -76,42 +77,45 @@ export class TabHelper implements TabHandlerInterface, TabSessionZoneMaker {
     });
   }
 
+  async addScriptToRunOnNewDocument(
+    script: string | TabEvaluateFunction,
+    tabId: string
+  ): Promise<void> {
+    return await this.sessionZone(tabId, async (sess) => {
+      const { Page } = sess;
+
+      const { serialazedFunc } = evaluationSctriptProvider(script);
+      await Page.addScriptToEvaluateOnNewDocument({
+        source: serialazedFunc,
+      });
+    });
+  }
+
   async evaluateScriptOnTab(
     script: string | TabEvaluateFunction,
     tabId: string,
-    shouldAwait: boolean = false
+    _shouldAwait?: boolean
   ) {
-    let serialazedFunc: string;
+    return await this.sessionZone(tabId, async (sess) => {
+      const { Runtime } = sess;
 
-    if (typeof script === 'string') {
-      serialazedFunc = script.trim();
-      shouldAwait = serialazedFunc.startsWith('async');
-    } else {
-      const tempSerialized = script.toString().trim();
-      shouldAwait = tempSerialized.startsWith('async');
-      serialazedFunc = `(${tempSerialized})()`;
-    }
+      const { serialazedFunc, shouldAwait } = evaluationSctriptProvider(script);
+      const result = await Runtime.evaluate({
+        expression: serialazedFunc,
+        awaitPromise: _shouldAwait ?? shouldAwait,
+        returnByValue: true,
+      });
 
-    const { Runtime } = await CDP({
-      port: this.chromeSessionPort,
-      target: tabId,
+      if (result.exceptionDetails) {
+        throw new EvaluateException(result.exceptionDetails);
+      }
+
+      return result.result.value;
     });
-
-    const result = await Runtime.evaluate({
-      expression: serialazedFunc,
-      awaitPromise: shouldAwait,
-      returnByValue: true,
-    });
-
-    if (result.exceptionDetails) {
-      throw new EvaluateException(result.exceptionDetails);
-    }
-
-    return result.result.value;
   }
 
   async close(tabId: string): Promise<void> {
     await CDP.Close({ id: tabId, port: this.chromeSessionPort });
-    this.onClose?.(tabId);
+    await this.onClose?.(tabId);
   }
 }
