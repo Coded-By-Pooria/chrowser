@@ -1,11 +1,15 @@
 import CDP from 'chrome-remote-interface';
 import { TabHandlerInterface } from './tabHandler';
 import TabMouseHandler from './tabMouseHandler';
-import Tab, { type TabEvaluateFunction } from './tab';
+import Tab, {
+  WaitUntilNetworkIdleOptions,
+  type TabEvaluateFunction,
+} from './tab';
 import { EvaluateException } from '../exceptions/evaluateException';
 import type TabNavigationOptions from './tabNavigationOptions';
 import NavigationException from '../exceptions/navigationException';
 import { evaluationSctriptProvider } from './helper';
+import { Network } from '../types';
 
 export interface TabSessionZoneMaker {
   sessionZone<T>(
@@ -114,8 +118,87 @@ export class TabHelper implements TabHandlerInterface, TabSessionZoneMaker {
     });
   }
 
+  async waitUntilNetworkIdle(
+    tabId: string,
+    options: WaitUntilNetworkIdleOptions
+  ) {
+    return this.sessionZone(tabId, ({ Network }) => {
+      return WaitUntilNetworkIdleHandler.start(Network, options);
+    });
+  }
+
   async close(tabId: string): Promise<void> {
     await CDP.Close({ id: tabId, port: this.chromeSessionPort });
     await this.onClose?.(tabId);
+  }
+}
+
+class WaitUntilNetworkIdleHandler {
+  private constructor(
+    private networkContext: Network,
+    private idleInterval: number,
+    private tolerance: number
+  ) {}
+  private lastIdleItem!: number;
+  private isResolved = false;
+  private timerId!: NodeJS.Timeout;
+
+  private waiterResolver!: () => void;
+  private waiterRejecter!: (reason?: any) => void;
+
+  private async start() {
+    await this.networkContext.enable();
+    this.lastIdleItem = Date.now();
+    this.networkContext.on('requestWillBeSent', (_) => {
+      if (!this.isResolved) this.resetTimer();
+    });
+    this.networkContext.on('responseReceived', (_) => {
+      if (!this.isResolved) this.resetTimer();
+    });
+
+    this.setTimer();
+
+    return new Promise<void>((res, rej) => {
+      this.waiterResolver = res;
+      this.waiterRejecter = rej;
+    });
+  }
+
+  private resetTimer() {
+    const newIdleTime = Date.now();
+    const diff = newIdleTime - this.lastIdleItem;
+    const tolerancedBound =
+      this.idleInterval - this.tolerance * this.idleInterval;
+    if (diff >= tolerancedBound) {
+      this.resolve();
+      return;
+    }
+    this.lastIdleItem = newIdleTime;
+    clearTimeout(this.timerId);
+    this.setTimer();
+  }
+  private setTimer() {
+    this.timerId = setTimeout(() => {
+      this.resolve();
+    }, this.idleInterval);
+  }
+
+  private async resolve() {
+    this.isResolved = true;
+    await this.networkContext.disable();
+    this.waiterResolver();
+  }
+
+  static start(
+    networkContext: Network,
+    options: WaitUntilNetworkIdleOptions & { tolerance?: number }
+  ) {
+    const tolerance = options.tolerance ?? 0.05;
+    const handler = new WaitUntilNetworkIdleHandler(
+      networkContext,
+      options.idleInterval,
+      tolerance
+    );
+    return handler.start();
   }
 }

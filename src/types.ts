@@ -16,3 +16,7 @@ export type Input = CDP.DoEventPromises<'Input'> &
 export type Page = CDP.DoEventPromises<'Page'> &
   CDP.DoEventListeners<'Page'> &
   CDP.AddOptParams<CDP.OptIfParamNullable<ProtocolProxyApi.PageApi>>;
+
+export type Network = CDP.DoEventPromises<'Network'> &
+  CDP.DoEventListeners<'Network'> &
+  CDP.AddOptParams<CDP.OptIfParamNullable<ProtocolProxyApi.NetworkApi>>;

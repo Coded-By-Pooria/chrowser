@@ -32,4 +32,15 @@ export default class Tab {
   addScriptToRunOnNewDocument(script: string | TabEvaluateFunction) {
     return this.helper.addScriptToRunOnNewDocument(script, this.tabId);
   }
+
+  async waitUntilNetworkIdle(
+    options: WaitUntilNetworkIdleOptions = { idleInterval: 500, idleNumber: 0 }
+  ) {
+    return this.helper.waitUntilNetworkIdle(this.tabId, options);
+  }
+}
+
+export interface WaitUntilNetworkIdleOptions {
+  idleInterval: number;
+  idleNumber?: number;
 }
