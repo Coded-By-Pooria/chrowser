@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "A simple library to work on chrommium and scrape using it over cdp session",
   "main": "build/chrowser.js",
-  "types": "build/chrowser.d.ts",
+  "types": "build/@types/index.d.ts",
   "author": "Pooria <PouriyaXAmini@gmail.com>",
   "license": "ISC",
   "homepage": "https://github.com/Coded-By-Pooria/chrowser",
