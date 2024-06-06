@@ -20,7 +20,7 @@ export default class Tab {
     return this._tabId;
   }
 
-  private _mouseHandler: TabMouseHandler;
+  private _mouseHandler?: TabMouseHandler;
   get mouseHandler() {
     return (this._mouseHandler ??= this.helper.provideMouseHandler(this.tabId));
   }

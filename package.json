@@ -2,18 +2,27 @@
   "name": "chrowser",
   "version": "1.0.0",
   "description": "A simple library to work on chrommium and scrape using it over cdp session",
-  "main": "index.js",
+  "main": "dist/routory.js",
+  "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "_clear": "rimraf build/compiled/*",
+    "_tsc": "tsc",
+    "_make-bundle": "rollup --config",
+    "build": "run-s _tsc _make-bundle"
   },
   "author": "Pooria",
   "license": "ISC",
   "dependencies": {
-    "axios": "^1.7.2",
     "chrome-launcher": "^1.1.1",
     "chrome-remote-interface": "^0.33.0"
   },
   "devDependencies": {
-    "@types/chrome-remote-interface": "^0.31.14"
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/chrome-remote-interface": "^0.31.14",
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^5.0.7",
+    "rollup": "^4.18.0",
+    "rollup-plugin-dts": "^6.1.1",
+    "typescript": "^5.4.5"
   }
 }

@@ -10,7 +10,9 @@ export default class Browser implements TabHandlerInterface {
 
   private constructor() {}
 
-  private window: LaunchedChrome;
+  private window!: LaunchedChrome;
+  private tabHandler!: TabHandler;
+
   private async init() {
     this.window = await launch({
       chromeFlags: [
@@ -24,7 +26,6 @@ export default class Browser implements TabHandlerInterface {
     this.tabHandler = await TabHandler.create(this.window.port);
   }
 
-  private tabHandler: TabHandler;
   private defaultTabConsumed: boolean = false;
 
   async newTab(options: { url: string } = { url: '' }) {
