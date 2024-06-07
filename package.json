@@ -8,7 +8,7 @@
     "_clear_compiled": "rimraf ./dist/chrowser_module/compiled",
     "_tsc": "tsc",
     "_make-bundle": "rollup --config",
-    "build": "run-s _clear_dist  _make-bundle _clear_compiled"
+    "build": "run-s  _make-bundle _clear_compiled"
   },
   "author": "Pooria",
   "license": "ISC",
