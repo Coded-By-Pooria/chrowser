@@ -1,27 +1,39 @@
 import { LaunchedChrome, launch } from 'chrome-launcher';
-import TabHandler, { TabHandlerInterface } from './tab/tabHandler';
+import TabHandler, { TabHandlerInterface } from './tab/tabHandler.js';
+
+export interface BrowserOptions {
+  args?: string[];
+  userDir?: string;
+}
 
 export default class Browser implements TabHandlerInterface {
-  static async create() {
+  private isClosed = false;
+  static async create(options?: BrowserOptions) {
     const browser = new Browser();
     await browser.init();
     return browser;
   }
 
-  private constructor() {}
+  private constructor(private browserOptions?: BrowserOptions) {}
 
   private window!: LaunchedChrome;
   private tabHandler!: TabHandler;
 
   private async init() {
+    const browserArgs = [];
+
+    if (this.browserOptions?.userDir?.trim()) {
+      browserArgs.push(
+        `--user-data-directory="${this.browserOptions.userDir.trim()}"`
+      );
+    }
+
+    if (this.browserOptions?.args?.length) {
+      browserArgs.push(...this.browserOptions.args);
+    }
+
     this.window = await launch({
-      chromeFlags: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--blink-settings=imagesEnabled=true',
-      ],
+      chromeFlags: browserArgs,
     });
     this.tabHandler = await TabHandler.create(this.window.port);
   }
@@ -29,6 +41,7 @@ export default class Browser implements TabHandlerInterface {
   private defaultTabConsumed: boolean = false;
 
   async newTab(options: { url: string } = { url: '' }) {
+    this.isCloseCheck();
     if (!this.defaultTabConsumed) {
       this.defaultTabConsumed = true;
       return this.tabHandler.getAllTabs()[0];
@@ -37,10 +50,20 @@ export default class Browser implements TabHandlerInterface {
   }
 
   close() {
+    this.isClosed = true;
     this.window.kill();
   }
 
+  private isCloseCheck() {
+    if (this.isClosed) {
+      throw new Error(
+        'Cannot operate on closed browser. Launch another instance of chrowser and try this action.'
+      );
+    }
+  }
+
   getAllOpenTabs() {
+    this.isCloseCheck();
     return this.tabHandler.getAllTabs();
   }
 }

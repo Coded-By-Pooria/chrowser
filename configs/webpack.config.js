@@ -1,6 +1,5 @@
 // Generated using webpack-cli https://github.com/webpack/webpack-cli
 const path = require('path');
-const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');

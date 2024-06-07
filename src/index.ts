@@ -1,6 +1,6 @@
-import Browser from './browser';
-import Tab, { TabEvaluateFunction } from './tab/tab';
-import TabNavigationOptions from './tab/tabNavigationOptions';
+import Browser from './browser.js';
+import Tab, { TabEvaluateFunction } from './tab/tab.js';
+import TabNavigationOptions from './tab/tabNavigationOptions.js';
 
 export default Browser;
 
