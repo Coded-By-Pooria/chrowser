@@ -2,10 +2,13 @@
   "name": "chrowser",
   "version": "1.0.0",
   "description": "A simple library to work on chrommium and scrape using it over cdp session",
-  "main": "dist/build/chrowser.js",
-  "types": "dist/build/@types/index.d.ts",
+  "main": "src/index.ts",
   "scripts": {
-    "build": "webpack --mode=production --node-env=production --config ./configs/webpack.config.js"
+    "_clear_dist": "rimraf ./dist",
+    "_clear_compiled": "rimraf ./dist/compiled",
+    "_tsc": "tsc",
+    "_make-bundle": "rollup --config",
+    "build": "run-s _clear_dist  _make-bundle _clear_compiled"
   },
   "author": "Pooria",
   "license": "ISC",
@@ -14,14 +17,14 @@
     "chrome-remote-interface": "^0.33.0"
   },
   "devDependencies": {
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/chrome-remote-interface": "^0.31.14",
-    "@types/webpack": "^5.28.5",
-    "@webpack-cli/generators": "^3.0.7",
-    "clean-webpack-plugin": "^4.0.0",
-    "copy-webpack-plugin": "^12.0.2",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.4.5",
-    "webpack": "^5.91.0",
-    "webpack-cli": "^5.1.4"
+    "npm-run-all": "^4.1.5",
+    "rimraf": "^5.0.7",
+    "rollup": "^4.18.0",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-dts": "^6.1.1",
+    "typescript": "^5.4.5"
   }
 }
