@@ -1,0 +1,1 @@
+import chrowser, { Tab } from '..';
