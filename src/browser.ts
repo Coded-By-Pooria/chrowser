@@ -9,7 +9,7 @@ export interface BrowserOptions {
 export default class Browser implements TabHandlerInterface {
   private isClosed = false;
   static async create(options?: BrowserOptions) {
-    const browser = new Browser();
+    const browser = new Browser(options);
     await browser.init();
     return browser;
   }
