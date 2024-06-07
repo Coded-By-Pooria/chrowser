@@ -12,6 +12,13 @@ export default class Tab {
     return navigationResult;
   }
 
+  async waitForSelectorAppear(
+    selector: string,
+    options?: WaitForSelectorOptions
+  ) {
+    return this.helper.waitForSelectorAppear(this.tabId, selector, options);
+  }
+
   evaluate(script: TabEvaluateFunction | string) {
     return this.helper.evaluateScriptOnTab(script, this.tabId);
   }
@@ -43,4 +50,9 @@ export default class Tab {
 export interface WaitUntilNetworkIdleOptions {
   idleInterval: number;
   idleNumber?: number;
+}
+
+export interface WaitForSelectorOptions {
+  pollInterval?: number;
+  waitTimeOut?: number;
 }

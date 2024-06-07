@@ -1,7 +1,8 @@
 import { TabEvaluateFunction } from './tab';
 
 export function evaluationSctriptProvider(
-  script: string | TabEvaluateFunction
+  script: string | TabEvaluateFunction,
+  ...argumentsTobeSent: any[]
 ) {
   let serialazedFunc: string;
   let shouldAwait = false;
@@ -11,7 +12,17 @@ export function evaluationSctriptProvider(
   } else {
     const tempSerialized = script.toString().trim();
     shouldAwait = tempSerialized.startsWith('async');
-    serialazedFunc = `(${tempSerialized})()`;
+    serialazedFunc = `(${tempSerialized})(
+    ${argumentsTobeSent
+      .map((a) => {
+        if (typeof a == 'string') {
+          return `"${a}"`;
+        } else {
+          return a;
+        }
+      })
+      .join(',')}
+    )`;
   }
 
   return { serialazedFunc, shouldAwait };
