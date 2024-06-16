@@ -1,29 +1,24 @@
+import JSDelegator from './js_delegator/remoteNodeDelegator';
 import { TabEvaluateFunction } from './tab';
 
-export function evaluationSctriptProvider(
-  script: string | TabEvaluateFunction,
-  ...argumentsTobeSent: any[]
+export function evaluationFunctionProvider(
+  script: string | TabEvaluateFunction
 ) {
-  let serialazedFunc: string;
-  let shouldAwait = false;
-  if (typeof script === 'string') {
-    serialazedFunc = script.trim();
-    shouldAwait = serialazedFunc.startsWith('async');
-  } else {
-    const tempSerialized = script.toString().trim();
-    shouldAwait = tempSerialized.startsWith('async');
-    serialazedFunc = `(${tempSerialized})(
-    ${argumentsTobeSent
-      .map((a) => {
-        if (typeof a == 'string') {
-          return `"${a}"`;
-        } else {
-          return a;
-        }
-      })
-      .join(',')}
-    )`;
-  }
+  const tempSerialized = script.toString().trim();
 
-  return { serialazedFunc, shouldAwait };
+  try {
+    new Function(tempSerialized);
+  } catch (err) {
+    if (
+      err instanceof Error &&
+      err.message.startsWith(
+        `EvalError: Refused to evaluate a string as JavaScript because 'unsafe-eval'`
+      )
+    ) {
+      // Assume valid func
+      return tempSerialized;
+    }
+    // handle function in func_name(){} format
+  }
+  return tempSerialized;
 }

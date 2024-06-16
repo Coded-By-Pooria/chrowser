@@ -9,7 +9,10 @@ async function tabHandler(browser: Browser, url: string) {
 
   const result = await tab.evaluate(async function () {
     return new Promise((res, rej) =>
-      setTimeout(() => res('Resolve after 3 seconds.\n'), 3000)
+      setTimeout(
+        () => res(`Resolve after 3 seconds. ${document.location.href}\n`),
+        3000
+      )
     );
   });
 
@@ -17,6 +20,20 @@ async function tabHandler(browser: Browser, url: string) {
     \turl: "${url}",
     \tresult: "${result}"
   }`);
+
+  await tab.navigate({
+    url: 'https://www.google.com/',
+    waitUntil: 'documentloaded',
+  });
+
+  console.log('second nav: GOOGLE');
+
+  await tab.navigate({
+    url: 'https://www.amazon.com/',
+    waitUntil: 'documentloaded',
+  });
+
+  console.log('second nav: AMAZON');
 }
 
 (async function () {

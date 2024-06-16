@@ -1,6 +1,5 @@
 import CDP from 'chrome-remote-interface';
-import { TabHelper } from './tabHelper';
-import Tab from './tab';
+import Tab, { TabImpl } from './tab';
 
 export interface TabHandlerInterface {
   newTab(options: { url: string }): Promise<Tab>;
@@ -17,16 +16,32 @@ export default class TabHandler {
     );
     return handler;
   }
-  private tabHelper: TabHelper;
 
   private constructor(private chromeSessionPort: number, defaultTabId: string) {
-    this.tabHelper = new TabHelper(chromeSessionPort, this.close.bind(this));
-    this.openedTabs.set(defaultTabId, new Tab(defaultTabId, this.tabHelper));
+    this.openedTabs.set(defaultTabId, new TabImpl(defaultTabId, this));
   }
+
+  provideSessionZone(tab: Tab) {
+    return new SessionZoneEstablisher(
+      { port: this.chromeSessionPort },
+      tab.tabId
+    );
+  }
+
   private openedTabs: Map<string, Tab> = new Map();
 
-  async newTab(options: { url: string } = { url: '' }) {
-    const newTab = await this.tabHelper.newTab(options);
+  private defaultTabDelivered = false;
+  async newTab(options: { url: string } = { url: '' }): Promise<Tab> {
+    if (!this.defaultTabDelivered) {
+      this.defaultTabDelivered = true;
+      return this.openedTabs.values().next().value as Tab;
+    }
+    const newTabSession = await CDP.New({
+      port: this.chromeSessionPort,
+      ...options,
+    });
+
+    const newTab = new TabImpl(newTabSession.id, this);
     this.openedTabs.set(newTab.tabId, newTab);
     return newTab;
   }
@@ -35,7 +50,32 @@ export default class TabHandler {
     return [...this.openedTabs.values()];
   }
 
-  async close(tabId: string): Promise<void> {
-    this.openedTabs.delete(tabId);
+  async close(tab: Tab): Promise<void> {
+    this.openedTabs.delete(tab.tabId);
+    return CDP.Close({
+      id: tab.tabId,
+      port: this.chromeSessionPort,
+    });
+  }
+}
+
+export class SessionZoneEstablisher {
+  constructor(
+    private connectionData: { port: number; host?: string },
+    private tabId: string
+  ) {}
+  async sessionZone<T>(callback: (session: CDP.Client) => Promise<T>) {
+    const tabSession = await CDP({
+      target: this.tabId,
+      ...this.connectionData,
+    });
+    try {
+      let result: T = await callback(tabSession);
+      return result;
+    } catch (err) {
+      throw err;
+    } finally {
+      await tabSession.close();
+    }
   }
 }

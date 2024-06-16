@@ -1,5 +1,5 @@
 import Protocol from 'devtools-protocol';
-import { CallSite } from '../callSite';
+import { CallSite } from './callSite';
 
 export class EvaluateException extends Error {
   static mapToCallSite(stack: Protocol.Runtime.StackTrace) {

@@ -38,14 +38,8 @@ export default class Browser implements TabHandlerInterface {
     this.tabHandler = await TabHandler.create(this.window.port);
   }
 
-  private defaultTabConsumed: boolean = false;
-
   async newTab(options: { url: string } = { url: '' }) {
     this.isCloseCheck();
-    if (!this.defaultTabConsumed) {
-      this.defaultTabConsumed = true;
-      return this.tabHandler.getAllTabs()[0];
-    }
     return this.tabHandler.newTab(options);
   }
 
