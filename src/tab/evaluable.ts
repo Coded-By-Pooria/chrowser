@@ -22,7 +22,7 @@ export default interface Evaluable {
    * @param selector Css felector for quering
    * @param handler Function to work with queried elements
    */
-  $evaluate<T extends TabEvaluateFunction<RemoteNodeDelegator<HTMLElement>>>(
+  $evaluate<T extends TabEvaluateFunction<HTMLElement>>(
     selector: string,
     handler: T
   ): Promise<ReturnType<T>>;
@@ -31,7 +31,7 @@ export default interface Evaluable {
    * @param selector Css felector for quering
    * @param handler Function to work with queried elements
    */
-  $$evaluate<T extends TabEvaluateFunction<RemoteNodeDelegator<HTMLElement>[]>>(
+  $$evaluate<T extends TabEvaluateFunction<HTMLElement[]>>(
     selector: string,
     handler: T
   ): Promise<ReturnType<T>[]>;

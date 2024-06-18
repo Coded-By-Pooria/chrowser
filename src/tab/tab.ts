@@ -48,13 +48,13 @@ export class TabImpl implements Tab {
   }
   $evaluate(
     selector: string,
-    handler: TabEvaluateFunction<RemoteNodeDelegator<HTMLElement>>
+    handler: TabEvaluateFunction<HTMLElement>
   ): Promise<any> {
     return this.frame.$evaluate(selector, handler);
   }
   $$evaluate(
     selector: string,
-    handler: TabEvaluateFunction<RemoteNodeDelegator<HTMLElement>[]>
+    handler: TabEvaluateFunction<HTMLElement[]>
   ): Promise<any> {
     return this.frame.$$evaluate(selector, handler);
   }

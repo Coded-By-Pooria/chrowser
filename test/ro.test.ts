@@ -36,7 +36,7 @@ async function tabHandler(browser: Browser, url: string) {
 
   try {
     tabHandler(browser, 'https://example.com');
-    // tabHandler(browser, 'https://bot.sannysoft.com');
+    // tabHandler(browser, 'https://www.google.com');
   } catch (err) {
     browser.close();
   }

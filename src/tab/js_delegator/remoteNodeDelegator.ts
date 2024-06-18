@@ -4,6 +4,7 @@ import { TabEvaluateFunction } from '../tab';
 import { EvaluateException } from '../../exceptions/evaluateException';
 import ExecutionContext from '../session_contexts/executionContext';
 import RemoteObjectDelegator from './remoteObjectDelegator';
+import { evaluationFunctionProvider } from '../helper';
 
 type QueryAllType<T extends TabEvaluateFunction | undefined = undefined> =
   T extends TabEvaluateFunction ? ReturnType<T>[] : RemoteNodeDelegator[];
@@ -107,18 +108,23 @@ export default class RemoteNodeDelegator<T extends Node = HTMLElement>
 
     return evaluatedNodesList;
   }
-  async $evaluate<T extends TabEvaluateFunction>(
+  async $evaluate<T extends TabEvaluateFunction<HTMLElement>>(
     selector: string,
     handler: T
   ): Promise<ReturnType<T>> {
-    const evaluatedNodesList = await this.$(selector);
-    return await handler(evaluatedNodesList);
+    const serializedHandler = evaluationFunctionProvider(handler);
+    const func = `(function e(){const result = document.querySelector('${selector}'); return (${serializedHandler})(result); })()`;
+
+    return await this.evaluate(func);
   }
-  async $$evaluate<T extends TabEvaluateFunction>(
+  async $$evaluate<T extends TabEvaluateFunction<HTMLElement[]>>(
     selector: string,
     handler: T
   ): Promise<ReturnType<T>[]> {
-    return await this.#querySelectorAll(selector, handler);
+    const serializedHandler = evaluationFunctionProvider(handler);
+    const func = `(function e(){const results = Array.from(document.querySelectorAll('${selector}')); return (${serializedHandler})(results); })()`;
+
+    return await this.evaluate(func);
   }
 
   private released = false;
