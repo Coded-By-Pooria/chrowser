@@ -1,4 +1,3 @@
-import JSDelegator from './js_delegator/remoteNodeDelegator';
 import { TabEvaluateFunction } from './tab';
 
 export function evaluationFunctionProvider(
@@ -18,7 +17,7 @@ export function evaluationFunctionProvider(
       // Assume valid func
       return tempSerialized;
     }
-    // handle function in func_name(){} format
+    // handle function in "func_name(){}" format
   }
   return tempSerialized;
 }

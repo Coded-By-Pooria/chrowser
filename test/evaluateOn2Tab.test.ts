@@ -40,8 +40,8 @@ async function tabHandler(browser: Browser, url: string) {
   const browser = await Browser.create();
 
   try {
-    tabHandler(browser, 'https://blogfa.com');
-    tabHandler(browser, 'https://bot.sannysoft.com');
+    tabHandler(browser, 'https://another-site.com');
+    tabHandler(browser, 'https://example.com');
   } catch (err) {
     browser.close();
   }

@@ -3,27 +3,27 @@ import Evaluable from '../evaluable';
 import { TabEvaluateFunction } from '../tab';
 import { EvaluateException } from '../../exceptions/evaluateException';
 import ExecutionContext from '../session_contexts/executionContext';
+import RemoteObjectDelegator from './remoteObjectDelegator';
 
 type QueryAllType<T extends TabEvaluateFunction | undefined = undefined> =
   T extends TabEvaluateFunction ? ReturnType<T>[] : RemoteNodeDelegator[];
 
 export default class RemoteNodeDelegator<T extends Node = HTMLElement>
+  extends RemoteObjectDelegator
   implements Evaluable
 {
   constructor(
-    private remoteObj: Protocol.Runtime.RemoteObject,
-    private context: ExecutionContext
-  ) {}
-
-  get objectId() {
-    return this.remoteObj.objectId!;
+    private context: ExecutionContext,
+    ro: Protocol.Runtime.RemoteObject
+  ) {
+    super(ro);
   }
 
   evaluate(script: string | TabEvaluateFunction, ...args: any[]) {
     if (this.released) {
       throw new Error('Cannot eval on remote node which released before.');
     }
-    const result = this.context.evaluate(true, script, args);
+    const result = this.context.evaluate(false, script, ...args);
 
     return result;
   }
@@ -41,28 +41,41 @@ export default class RemoteNodeDelegator<T extends Node = HTMLElement>
     return evaluatedNode;
   }
 
+  async click(): Promise<void> {
+    await this.evaluate(function (node) {
+      node.click();
+    }, this);
+  }
+
   async #querySelectorAll<
     T extends TabEvaluateFunction | undefined = undefined
   >(selector: string, handler?: T): Promise<QueryAllType<T>> {
     const evaluatedNodesList = await this.context.evaluate(
       true,
       function (base: HTMLElement, selector: string) {
-        const queryResult = base.querySelector(selector);
-        return Array.of(queryResult);
+        const queryResult = base.querySelectorAll(selector);
+        return Array.from(queryResult);
       },
       this,
       selector
     );
 
     const nodeDelegators = [] as unknown as QueryAllType<T>;
+    const nodeListLength = Number.parseInt(
+      /\d+/g.exec(
+        (evaluatedNodesList as never as RemoteObjectDelegator).description!
+      )![0]
+    );
 
-    for (let index = 0; ; index++) {
+    for (let index = 0; index < nodeListLength; index++) {
       try {
         const delegator = await this.context.evaluate(
           true,
           function (nodesList: HTMLElement[], index: number) {
-            if (index >= NodeList.length) {
-              throw new Error('Out of bound');
+            if (index >= nodesList.length) {
+              throw new Error(
+                `Out of bound - access ${index} of ${nodesList.length}`
+              );
             }
             return nodesList[index];
           },

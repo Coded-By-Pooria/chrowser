@@ -1,5 +1,5 @@
+import { Input } from '../types';
 import { sleep } from '../utils';
-import { TabSessionZoneMaker } from './tab';
 
 export interface TabMouseBaseOptions {
   x: number;
@@ -7,30 +7,31 @@ export interface TabMouseBaseOptions {
 }
 
 export default class TabMouseHandler {
-  constructor(private tabHelper: TabSessionZoneMaker) {}
+  constructor(private inputContext: Input) {}
 
   async move(options: TabMouseBaseOptions) {
-    this.tabHelper.sessionZone(async ({ Input }) => {
-      await Input.dispatchMouseEvent({ type: 'mouseMoved', ...options });
+    await this.inputContext.dispatchMouseEvent({
+      type: 'mouseMoved',
+      ...options,
     });
   }
   async click(options: TabMouseBaseOptions & { delay?: number }) {
-    this.tabHelper.sessionZone(async ({ Input }) => {
-      await Input.dispatchMouseEvent({
-        type: 'mousePressed',
-        ...options,
-        clickCount: 1,
-      });
+    await this.inputContext.dispatchMouseEvent({
+      type: 'mousePressed',
+      ...options,
+      clickCount: 1,
+      button: 'left',
+    });
 
-      if (options.delay) {
-        await sleep(options.delay);
-      }
+    if (options.delay) {
+      await sleep(options.delay);
+    }
 
-      await Input.dispatchMouseEvent({
-        type: 'mouseReleased',
-        ...options,
-        clickCount: 1,
-      });
+    await this.inputContext.dispatchMouseEvent({
+      type: 'mouseReleased',
+      ...options,
+      button: 'left',
+      clickCount: 1,
     });
   }
 }

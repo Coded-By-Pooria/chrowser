@@ -3,18 +3,13 @@ import Evaluable from './evaluable';
 import RemoteNodeDelegator from './js_delegator/remoteNodeDelegator';
 import TabMouseHandler from './tabMouseHandler';
 import type TabNavigationOptions from './tabNavigationOptions';
-import TabHandler, { SessionZoneEstablisher } from './tabHandler';
-import { evaluationFunctionProvider } from './helper';
-import WaitUntilNetworkIdleHandler from './tab_functionality/waitUntilNetworkIdle';
-import WaitForSelectorAppearHandler from './tab_functionality/waitForSelectorAppearHandler';
+import TabHandler from './tabHandler';
 import Frame from './frame';
-import ExecutionContext from './session_contexts/executionContext';
-import PageContext from './session_contexts/pageContext';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
-export interface TabSessionZoneMaker {
-  sessionZone<T>(callback: (session: CDP.Client) => Promise<T>): Promise<T>;
-}
+export type TabEvaluationScriptType<T = any, P = any> =
+  | string
+  | TabEvaluateFunction<T, P>;
 
 export default interface Tab extends Evaluable {
   tabId: string;
@@ -22,7 +17,11 @@ export default interface Tab extends Evaluable {
   navigate(options: TabNavigationOptions): Promise<void>;
   waitForSelectorAppear(
     selector: string,
-    options?: WaitForSelectorOptions
+    options?: PollWaitForOptions
+  ): Promise<void>;
+  waitUntilReturnTrue(
+    script: string | TabEvaluateFunction,
+    options?: PollWaitForOptions
   ): Promise<void>;
   addScriptToRunOnNewDocument(
     script: string | TabEvaluateFunction
@@ -31,11 +30,15 @@ export default interface Tab extends Evaluable {
   close(): Promise<void>;
 }
 
-export class TabImpl implements Tab, TabSessionZoneMaker {
-  constructor(private _tabId: string, private tabsHandler: TabHandler) {}
+export class TabImpl implements Tab {
+  constructor(
+    private _tabId: string,
+    private client: CDP.Client,
+    private tabsHandler: TabHandler
+  ) {}
 
   evaluate(script: string | TabEvaluateFunction, ...args: any[]): Promise<any> {
-    return this.frame.evaluate(script, args);
+    return this.frame.evaluate(script, ...args);
   }
   $(selector: string): Promise<RemoteNodeDelegator<HTMLElement> | null> {
     return this.frame.$(selector);
@@ -56,12 +59,6 @@ export class TabImpl implements Tab, TabSessionZoneMaker {
     return this.frame.$$evaluate(selector, handler);
   }
 
-  private sessionZoneEstablisher!: SessionZoneEstablisher;
-  async sessionZone<T>(callback: (session: CDP.Client) => Promise<T>) {
-    this.sessionZoneEstablisher ??= this.tabsHandler.provideSessionZone(this);
-    return this.sessionZoneEstablisher.sessionZone(callback);
-  }
-
   #frame?: Frame;
 
   private get frame() {
@@ -71,26 +68,22 @@ export class TabImpl implements Tab, TabSessionZoneMaker {
     return this.#frame;
   }
 
+  private async readyForFrame() {
+    const { Page, Runtime, Network } = this.client;
+    await Page.enable();
+    await Runtime.enable();
+    await Network.enable();
+  }
+
   async navigate(options: TabNavigationOptions) {
-    this.#frame ??= new Frame(new PageContext(this), this.executionContext);
+    await this.readyForFrame();
+    this.#frame ??= new Frame(this.client);
 
-    await this.sessionZone(async ({ Page, Runtime }) => {
-      return this.#frame!.navigate(options, Runtime, Page);
-    });
+    return this.#frame!.navigate(options);
   }
 
-  #executionContext!: ExecutionContext;
-  private get executionContext() {
-    return (this.#executionContext ??= new ExecutionContext(this));
-  }
-
-  async waitForSelectorAppear(
-    selector: string,
-    options?: WaitForSelectorOptions
-  ) {
-    return this.sessionZone(async ({ Runtime }) => {
-      return WaitForSelectorAppearHandler.start(Runtime, selector, options);
-    });
+  async waitForSelectorAppear(selector: string, options?: PollWaitForOptions) {
+    return this.frame.waitForSelectorAppear(selector, options);
   }
 
   get tabId() {
@@ -99,7 +92,7 @@ export class TabImpl implements Tab, TabSessionZoneMaker {
 
   private _mouseHandler?: TabMouseHandler;
   get mouseHandler() {
-    return (this._mouseHandler ??= new TabMouseHandler(this));
+    return (this._mouseHandler ??= new TabMouseHandler(this.client.Input));
   }
 
   close(): Promise<void> {
@@ -107,21 +100,18 @@ export class TabImpl implements Tab, TabSessionZoneMaker {
   }
 
   addScriptToRunOnNewDocument(script: string | TabEvaluateFunction) {
-    return this.sessionZone(async ({ Page }) => {
-      await Page.enable();
-      const serialazedFunc = evaluationFunctionProvider(script);
-      await Page.addScriptToEvaluateOnNewDocument({
-        source: serialazedFunc,
-      });
-    });
+    return this.frame.addScriptToRunOnNewDocument(script);
   }
 
-  async waitUntilNetworkIdle(
-    options: WaitUntilNetworkIdleOptions = { idleInterval: 500, idleNumber: 0 }
+  async waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions) {
+    return this.frame.waitUntilNetworkIdle(options);
+  }
+
+  async waitUntilReturnTrue(
+    script: string | TabEvaluateFunction,
+    options?: PollWaitForOptions
   ) {
-    return this.sessionZone(({ Network }) => {
-      return WaitUntilNetworkIdleHandler.start(Network, options);
-    });
+    return this.frame.waitUntilReturnTrue(script, options);
   }
 }
 
@@ -130,7 +120,7 @@ export interface WaitUntilNetworkIdleOptions {
   idleNumber?: number;
 }
 
-export interface WaitForSelectorOptions {
+export interface PollWaitForOptions {
   pollInterval?: number;
   waitTimeOut?: number;
 }

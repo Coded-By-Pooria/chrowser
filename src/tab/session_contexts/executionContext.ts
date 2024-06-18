@@ -1,121 +1,79 @@
 import Protocol from 'devtools-protocol';
+import CDP from 'chrome-remote-interface';
 import { EvaluateException } from '../../exceptions/evaluateException';
 import { evaluationFunctionProvider } from '../helper';
 import RemoteNodeDelegator from '../js_delegator/remoteNodeDelegator';
-import { TabEvaluateFunction, TabSessionZoneMaker } from '../tab';
+import { TabEvaluateFunction } from '../tab';
+import RemoteObjectDelegator from '../js_delegator/remoteObjectDelegator';
 
 export default class ExecutionContext {
-  // private executionContextDescription?: Protocol.Runtime.ExecutionContextDescription;
+  constructor(private context: CDP.Client, private id: number) {}
 
-  constructor(private context: TabSessionZoneMaker) {
-    // context.sessionZone(async ({ Runtime }) => {
-    //   return new Promise<void>((res) => {
-    //     Runtime.on('executionContextCreated', (id) => {
-    //       this.executionContextDescription = id.context;
-    //       res();
-    //     });
-    //     Runtime.on('executionContextDestroyed', (destroyedContext) => {
-    //       if (
-    //         this.executionContextDescription?.id ===
-    //         destroyedContext.executionContextId
-    //       ) {
-    //         this.executionContextDescription = undefined;
-    //       }
-    //       res();
-    //     });
-    //   });
-    // });
+  get executionContextId() {
+    return this.id;
   }
 
-  // private get executionContextId() {
-  //   if (!Number.isInteger(this.executionContextDescription?.id)) {
-  //     throw new Error(
-  //       'No execution context created. It happen with first navigation.'
-  //     );
-  //   }
-
-  //   return this.executionContextDescription!.id;
-  // }
-
-  private runExpression(
+  private async runExpression(
     script: string
   ): Promise<ReturnType<TabEvaluateFunction>> {
-    return this.context.sessionZone(async ({ Runtime }) => {
-      await Runtime.enable();
-
-      const evalRes = await Runtime.evaluate({
-        expression: script,
-        awaitPromise: true,
-        returnByValue: true,
-      });
-
-      if (evalRes.exceptionDetails) {
-        throw new EvaluateException(evalRes.exceptionDetails);
-      }
-
-      return evalRes.result;
+    const evalRes = await this.context.send('Runtime.evaluate', {
+      expression: script,
+      awaitPromise: true,
+      returnByValue: true,
     });
-  }
 
-  private _contextId?: number;
-  setContextId(contextId: number) {
-    this._contextId = contextId;
-  }
-
-  private get contextId() {
-    if (Number.isInteger(this._contextId)) {
-      return this._contextId!;
+    if (evalRes.exceptionDetails) {
+      throw new EvaluateException(evalRes.exceptionDetails);
     }
-    throw new Error('No context id exist. Maybe no navigation happened.');
+
+    return evalRes.result;
   }
 
-  private runFunction(
+  private async runFunction(
     returnRemoteObject: boolean,
     func: TabEvaluateFunction,
     ...args: any[]
   ) {
-    return this.context.sessionZone(async ({ Runtime, Target }) => {
-      await Runtime.enable();
+    const serialazedFunc = evaluationFunctionProvider(func);
 
-      const t = await Target.getTargets();
-      t.targetInfos[0].type === 'page';
+    const mappedArgs: Protocol.Runtime.CallArgument[] = args.length
+      ? args.map<Protocol.Runtime.CallArgument>((a) => {
+          if (a instanceof RemoteObjectDelegator) {
+            return { objectId: a.id };
+          }
+          return { value: a };
+        })
+      : [];
 
-      const serialazedFunc = evaluationFunctionProvider(func);
-
-      const mappedArgs: Protocol.Runtime.CallArgument[] = args.length
-        ? args.map<Protocol.Runtime.CallArgument>((a) => {
-            if (a instanceof RemoteNodeDelegator) {
-              return { objectId: a.objectId };
-            }
-            return { value: a };
-          })
-        : [];
-
-      const result = await Runtime.callFunctionOn({
-        functionDeclaration: serialazedFunc,
-        awaitPromise: true,
-        returnByValue: !returnRemoteObject,
-        executionContextId: this.contextId,
-        arguments: mappedArgs,
-      });
-
-      if (result.exceptionDetails) {
-        throw new EvaluateException(result.exceptionDetails);
-      }
-
-      return result.result;
+    const result = await this.context.send('Runtime.callFunctionOn', {
+      functionDeclaration: serialazedFunc,
+      awaitPromise: true,
+      returnByValue: !returnRemoteObject,
+      executionContextId: this.executionContextId,
+      arguments: mappedArgs,
     });
+
+    if (result.exceptionDetails) {
+      throw new EvaluateException(result.exceptionDetails);
+    }
+
+    return result.result;
   }
 
-  // Todo: Change the cdp session architecture from session zone
-  // to perminant session. that why we comment constructor body code
-  // because the event listening ignored when session zone destroyed.
+  private chechContext() {
+    if (!Number.isInteger(this.executionContextId)) {
+      throw new Error(
+        'No execution context created. It happen with first navigation.'
+      );
+    }
+  }
 
   async evaluate<T extends TabEvaluateFunction | string>(
     returnRemoteObject: boolean,
     script: T,
     ...args: any[]
   ): Promise<EvaledType<T>> {
+    this.chechContext();
     let evaledRO: Protocol.Runtime.RemoteObject;
 
     if (typeof script === 'string') {
@@ -125,15 +83,16 @@ export default class ExecutionContext {
     }
 
     // To do : support unserializable (Jsonable) object handling
-    return evaledRO.subtype == 'node'
-      ? new RemoteNodeDelegator(evaledRO, this)
+    return returnRemoteObject
+      ? evaledRO.subtype == 'node'
+        ? new RemoteNodeDelegator(this, evaledRO)
+        : new RemoteObjectDelegator(evaledRO)
       : evaledRO.value!;
   }
 
   releaseRO(ro: RemoteNodeDelegator) {
-    return this.context.sessionZone(async ({ Runtime }) => {
-      await Runtime.enable();
-      return Runtime.releaseObject({ objectId: ro.objectId });
+    return this.context.send('Runtime.releaseObject', {
+      objectId: ro.id,
     });
   }
 }

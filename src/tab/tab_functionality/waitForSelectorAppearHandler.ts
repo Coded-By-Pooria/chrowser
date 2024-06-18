@@ -1,18 +1,16 @@
-import { EvaluateException } from '../../exceptions/evaluateException';
 import WaitforSelectorAppearTimeoutException from '../../exceptions/waitForSelectorTimeoutException';
-import { Runtime } from '../../types';
-import { evaluationSctriptProvider } from '../helper';
-import { WaitForSelectorOptions } from '../tab';
+import Evaluable from '../evaluable';
+import { PollWaitForOptions } from '../tab';
 import BaseWaiterMixin from './baseWaiterMixin';
 
 export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
   static async start(
-    runtimeContext: Runtime,
+    evaluateContext: Evaluable,
     selector: string,
-    options?: WaitForSelectorOptions
+    options?: PollWaitForOptions
   ) {
     const hadnler = new WaitForSelectorAppearHandler(
-      runtimeContext,
+      evaluateContext,
       selector,
       options?.pollInterval,
       options?.waitTimeOut
@@ -20,7 +18,7 @@ export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
     return hadnler.start();
   }
   private constructor(
-    private runtimeContext: Runtime,
+    private evaluateContext: Evaluable,
     private selector: string,
     private pollInterval: number = 100,
     private timeOut: number = 30000
@@ -30,14 +28,13 @@ export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
 
   private startTime!: number;
   private async start() {
-    await this.runtimeContext.enable();
     this.startTime = Date.now();
     this.checkSelectorExistence();
     return super.wait();
   }
 
   private async checkSelectorExistence() {
-    const funcScript = evaluationSctriptProvider((selector: string) => {
+    const result = await this.evaluateContext.evaluate((selector: string) => {
       const selectorResult = document.querySelectorAll(selector);
       if (selectorResult.length) {
         return true;
@@ -46,17 +43,7 @@ export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
       }
     }, this.selector);
 
-    const result = await this.runtimeContext.evaluate({
-      expression: funcScript.serialazedFunc,
-      returnByValue: true,
-      awaitPromise: false,
-    });
-
-    if (result.exceptionDetails) {
-      throw new EvaluateException(result.exceptionDetails);
-    }
-
-    if (result.result.value === true) {
+    if (result) {
       await this.resolve();
       return;
     }
@@ -65,7 +52,6 @@ export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
   }
 
   private async resolve() {
-    await this.runtimeContext.disable();
     this.waiterResolver();
   }
 

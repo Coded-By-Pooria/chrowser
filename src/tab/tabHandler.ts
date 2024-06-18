@@ -7,24 +7,23 @@ export interface TabHandlerInterface {
 
 export default class TabHandler {
   static async create(chromeSessionPort: number) {
-    const { Target } = await CDP({ port: chromeSessionPort });
-    const defaultTabInfo = await Target.getTargetInfo();
+    const session = await CDP({ port: chromeSessionPort });
+    const defaultTabInfo = await session.Target.getTargetInfo();
 
-    const handler = new TabHandler(
-      chromeSessionPort,
-      defaultTabInfo.targetInfo.targetId
-    );
+    const handler = new TabHandler(chromeSessionPort, {
+      id: defaultTabInfo.targetInfo.targetId,
+      session,
+    });
     return handler;
   }
 
-  private constructor(private chromeSessionPort: number, defaultTabId: string) {
-    this.openedTabs.set(defaultTabId, new TabImpl(defaultTabId, this));
-  }
-
-  provideSessionZone(tab: Tab) {
-    return new SessionZoneEstablisher(
-      { port: this.chromeSessionPort },
-      tab.tabId
+  private constructor(
+    private chromeSessionPort: number,
+    defaultTab: { session: CDP.Client; id: string }
+  ) {
+    this.openedTabs.set(
+      defaultTab.id,
+      new TabImpl(defaultTab.id, defaultTab.session, this)
     );
   }
 
@@ -41,7 +40,12 @@ export default class TabHandler {
       ...options,
     });
 
-    const newTab = new TabImpl(newTabSession.id, this);
+    const session = await CDP({
+      port: this.chromeSessionPort,
+      target: newTabSession.id,
+    });
+
+    const newTab = new TabImpl(newTabSession.id, session, this);
     this.openedTabs.set(newTab.tabId, newTab);
     return newTab;
   }
@@ -56,26 +60,5 @@ export default class TabHandler {
       id: tab.tabId,
       port: this.chromeSessionPort,
     });
-  }
-}
-
-export class SessionZoneEstablisher {
-  constructor(
-    private connectionData: { port: number; host?: string },
-    private tabId: string
-  ) {}
-  async sessionZone<T>(callback: (session: CDP.Client) => Promise<T>) {
-    const tabSession = await CDP({
-      target: this.tabId,
-      ...this.connectionData,
-    });
-    try {
-      let result: T = await callback(tabSession);
-      return result;
-    } catch (err) {
-      throw err;
-    } finally {
-      await tabSession.close();
-    }
   }
 }
