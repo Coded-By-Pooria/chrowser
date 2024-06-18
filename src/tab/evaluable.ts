@@ -34,7 +34,7 @@ export default interface Evaluable {
   $$evaluate<T extends TabEvaluateFunction<HTMLElement[]>>(
     selector: string,
     handler: T
-  ): Promise<ReturnType<T>[]>;
+  ): Promise<ReturnType<T>>;
 }
 
 export class BaseEvaluable implements Evaluable {
@@ -56,7 +56,7 @@ export class BaseEvaluable implements Evaluable {
   $$evaluate<T extends TabEvaluateFunction>(
     selector: string,
     handler: T
-  ): Promise<ReturnType<T>[]> {
+  ): Promise<ReturnType<T>> {
     throw new Error('Method not implemented.');
   }
 }

@@ -120,7 +120,7 @@ export default class RemoteNodeDelegator<T extends Node = HTMLElement>
   async $$evaluate<T extends TabEvaluateFunction<HTMLElement[]>>(
     selector: string,
     handler: T
-  ): Promise<ReturnType<T>[]> {
+  ): Promise<ReturnType<T>> {
     const serializedHandler = evaluationFunctionProvider(handler);
     const func = `(function e(){const results = Array.from(document.querySelectorAll('${selector}')); return (${serializedHandler})(results); })()`;
 

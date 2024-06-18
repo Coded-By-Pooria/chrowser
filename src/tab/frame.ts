@@ -220,7 +220,7 @@ export default class Frame implements Evaluable {
   async $$evaluate<T extends TabEvaluateFunction<HTMLElement[]>>(
     selector: string,
     handler: T
-  ): Promise<ReturnType<T>[]> {
+  ): Promise<ReturnType<T>> {
     const doc = await this.document();
     return doc.$$evaluate(selector, handler);
   }
