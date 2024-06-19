@@ -1,6 +1,5 @@
-import Protocol from 'devtools-protocol';
-
-type TabNavigationOptions = Protocol.Page.NavigateRequest & {
+type TabNavigationOptions = {
+  url: string;
   waitUntil?: 'documentloaded' | 'load';
 };
 
