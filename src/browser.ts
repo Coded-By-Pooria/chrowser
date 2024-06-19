@@ -22,11 +22,11 @@ export default class Browser implements TabHandlerInterface {
   private async init() {
     const browserArgs = [];
 
-    if (this.browserOptions?.userDir?.trim()) {
-      browserArgs.push(
-        `--user-data-directory="${this.browserOptions.userDir.trim()}"`
-      );
-    }
+    // if (this.browserOptions?.userDir?.trim()) {
+    //   browserArgs.push(
+    //     `--user-data-directory="${this.browserOptions.userDir.trim()}"`
+    //   );
+    // }
 
     if (this.browserOptions?.args?.length) {
       browserArgs.push(...this.browserOptions.args);
@@ -34,6 +34,7 @@ export default class Browser implements TabHandlerInterface {
 
     this.window = await launch({
       chromeFlags: browserArgs,
+      userDataDir: this.browserOptions?.userDir,
     });
     this.tabHandler = await TabHandler.create(this.window.port);
   }
