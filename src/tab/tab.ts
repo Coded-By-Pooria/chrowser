@@ -79,7 +79,22 @@ export class TabImpl implements Tab {
     await this.readyForFrame();
     this.#frame ??= new Frame(this.client);
 
-    return this.#frame!.navigate(options);
+    try {
+      return this.#frame!.navigate(options);
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        err.message
+          .toLocaleLowerCase()
+          .includes('net::ERR_EMPTY_RESPONSE'.toLocaleLowerCase())
+      ) {
+        throw new Error(
+          'No response sent from server. Try navigation again or navigate to another url.'
+        );
+      }
+
+      throw err;
+    }
   }
 
   async waitForSelectorAppear(selector: string, options?: PollWaitForOptions) {
