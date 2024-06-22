@@ -21,7 +21,7 @@ export default interface Tab extends Evaluable {
     options?: PollWaitForOptions
   ): Promise<void>;
   waitUntilReturnTrue(
-    script: string | TabEvaluateFunction,
+    script: WaiterSignalFunc,
     options?: PollWaitForOptions,
     ...args: any[]
   ): Promise<void>;
