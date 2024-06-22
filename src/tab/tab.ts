@@ -75,9 +75,9 @@ export class TabImpl implements Tab {
     await Network.enable();
   }
 
-  async navigate(options: TabNavigationOptions) {
+  async navigate(options: TabNavigationOptions): Promise<void> {
     await this.readyForFrame();
-    this.#frame ??= new Frame(this.client);
+    this.#frame ??= new Frame(this.client, this);
 
     try {
       return this.#frame!.navigate(options);
@@ -105,9 +105,8 @@ export class TabImpl implements Tab {
     return this._tabId;
   }
 
-  private _mouseHandler?: TabMouseHandler;
   get mouseHandler() {
-    return (this._mouseHandler ??= new TabMouseHandler(this.client.Input));
+    return this.frame.mouseHandler;
   }
 
   close(): Promise<void> {

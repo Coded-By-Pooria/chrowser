@@ -6,7 +6,7 @@ export interface TabMouseBaseOptions {
   y: number;
 }
 
-export default class TabMouseHandler {
+export default class MouseHandler {
   constructor(private inputContext: Input) {}
 
   async move(options: TabMouseBaseOptions) {

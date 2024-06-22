@@ -4,7 +4,7 @@ import NavigationException from '../exceptions/navigationException';
 import Evaluable from './evaluable';
 import ExecutionContext from './session_contexts/executionContext';
 import RemoteNodeDelegator from './js_delegator/remoteNodeDelegator';
-import {
+import Tab, {
   TabEvaluateFunction,
   PollWaitForOptions,
   WaitUntilNetworkIdleOptions,
@@ -15,6 +15,7 @@ import WaitUntilNetworkIdleHandler from './tab_functionality/waitUntilNetworkIdl
 import { evaluationFunctionProvider } from './helper';
 import WaitUntilReturnTrue from './tab_functionality/waitUntilReturnTrue';
 import { Waiter } from '../utils';
+import MouseHandler from './tabMouseHandler';
 
 enum FrameNavigationState {
   NONE,
@@ -24,11 +25,15 @@ enum FrameNavigationState {
   NAVIGATE_LOAD_EVENT,
 }
 
-export default class Frame implements Evaluable {
+export interface NodeROCreator {
+  createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator;
+}
+
+export default class Frame implements Evaluable, NodeROCreator {
   private frameNavigationWaitUntil: 'documentloaded' | 'load' =
     'documentloaded';
   private navigationWaiter?: Waiter;
-  constructor(private context: CDP.Client) {
+  constructor(private context: CDP.Client, private tab: Tab) {
     context.on('Page.frameNavigated', (p) => {
       if (p.frame.id === this.frameId && p.type === 'Navigation') {
         this.#executionContext = this.framesDoc = undefined;
@@ -96,10 +101,24 @@ export default class Frame implements Evaluable {
     if (aux && aux.isDefault && aux.frameId === this.frameId) {
       this.#executionContext = new ExecutionContext(
         this.context,
+        this,
         contextInfo.context.id
       );
       this.executionContextWaiterResolver?.();
     }
+  }
+
+  private _mouseHandler?: MouseHandler;
+  get mouseHandler() {
+    return (this._mouseHandler ??= new MouseHandler(this.context.Input));
+  }
+
+  createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator {
+    return new RemoteNodeDelegator(
+      this.executionContext,
+      this.mouseHandler,
+      ro
+    );
   }
 
   private framesDoc?: RemoteNodeDelegator<Document>;

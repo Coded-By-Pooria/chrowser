@@ -3,11 +3,16 @@ import CDP from 'chrome-remote-interface';
 import { EvaluateException } from '../../exceptions/evaluateException';
 import { evaluationFunctionProvider } from '../helper';
 import RemoteNodeDelegator from '../js_delegator/remoteNodeDelegator';
-import { TabEvaluateFunction } from '../tab';
+import Tab, { TabEvaluateFunction } from '../tab';
 import RemoteObjectDelegator from '../js_delegator/remoteObjectDelegator';
+import { NodeROCreator } from '../frame';
 
 export default class ExecutionContext {
-  constructor(private context: CDP.Client, private id: number) {}
+  constructor(
+    private context: CDP.Client,
+    private creator: NodeROCreator,
+    private id: number
+  ) {}
 
   get executionContextId() {
     return this.id;
@@ -85,7 +90,7 @@ export default class ExecutionContext {
     // To do : support unserializable (Jsonable) object handling
     return returnRemoteObject
       ? evaledRO.subtype == 'node'
-        ? new RemoteNodeDelegator(this, evaledRO)
+        ? this.creator.createRO(evaledRO)
         : new RemoteObjectDelegator(evaledRO)
       : evaledRO.value!;
   }

@@ -5,6 +5,8 @@ import { EvaluateException } from '../../exceptions/evaluateException';
 import ExecutionContext from '../session_contexts/executionContext';
 import RemoteObjectDelegator from './remoteObjectDelegator';
 import { evaluationFunctionProvider } from '../helper';
+import { randomBetween, randomSign } from '../../utils';
+import MouseHandler from '../tabMouseHandler';
 
 type QueryAllType<T extends TabEvaluateFunction | undefined = undefined> =
   T extends TabEvaluateFunction ? ReturnType<T>[] : RemoteNodeDelegator[];
@@ -15,6 +17,7 @@ export default class RemoteNodeDelegator<T extends Node = HTMLElement>
 {
   constructor(
     private context: ExecutionContext,
+    private mouseHandler: MouseHandler,
     ro: Protocol.Runtime.RemoteObject
   ) {
     super(ro);
@@ -42,10 +45,41 @@ export default class RemoteNodeDelegator<T extends Node = HTMLElement>
     return evaluatedNode;
   }
 
-  async click(): Promise<void> {
-    await this.evaluate(function (node) {
-      node.click();
+  async click(withMouse?: boolean): Promise<void> {
+    if (!withMouse) {
+      await this.evaluate(function (node) {
+        node.click();
+      }, this);
+      return;
+    }
+
+    const position = await this.evaluate(function (node: HTMLElement) {
+      const { width, height, top, left } = node.getBoundingClientRect();
+      return { width, height, top, left };
     }, this);
+
+    if (
+      !(
+        isFinite(position.width) &&
+        isFinite(position.height) &&
+        isFinite(position.top) &&
+        isFinite(position.left)
+      )
+    ) {
+      throw new Error('Cannot calculate nodes position.');
+    }
+    const x =
+      position.left +
+      position.width / 2 +
+      randomBetween(position.width / 1000, position.width / 100) * randomSign();
+
+    const y =
+      position.top +
+      position.height / 2 +
+      randomBetween(position.height / 1000, position.height / 100) *
+        randomSign();
+
+    this.mouseHandler.click({ x, y });
   }
 
   async #querySelectorAll<
