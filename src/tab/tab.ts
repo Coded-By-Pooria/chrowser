@@ -5,6 +5,7 @@ import TabMouseHandler from './tabMouseHandler';
 import type TabNavigationOptions from './tabNavigationOptions';
 import TabHandler from './tabHandler';
 import Frame from './frame';
+import { type WaiterSignalFunc } from './tab_functionality/waitUntilReturnTrue';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
 export type TabEvaluationScriptType<T = any, P = any> =
@@ -21,7 +22,8 @@ export default interface Tab extends Evaluable {
   ): Promise<void>;
   waitUntilReturnTrue(
     script: string | TabEvaluateFunction,
-    options?: PollWaitForOptions
+    options?: PollWaitForOptions,
+    ...args: any[]
   ): Promise<void>;
   addScriptToRunOnNewDocument(
     script: string | TabEvaluateFunction
@@ -122,10 +124,11 @@ export class TabImpl implements Tab {
   }
 
   async waitUntilReturnTrue(
-    script: string | TabEvaluateFunction,
-    options?: PollWaitForOptions
+    script: WaiterSignalFunc,
+    options?: PollWaitForOptions,
+    ...args: any[]
   ) {
-    return this.frame.waitUntilReturnTrue(script, options);
+    return this.frame.waitUntilReturnTrue(script, options, ...args);
   }
 }
 

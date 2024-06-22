@@ -1,31 +1,39 @@
 import WaitForSelector from '../../exceptions/waitForException';
 import Evaluable from '../evaluable';
 import { evaluationFunctionProvider } from '../helper';
-import { TabEvaluateFunction, TabEvaluationScriptType } from '../tab';
+import { TabEvaluateFunction } from '../tab';
 import BasePollStateMixin from './basePollStateMixin';
+
+export type WaiterSignalFunc = TabEvaluateFunction<
+  any,
+  boolean | Promise<boolean>
+>;
 
 export default class WaitUntilReturnTrue extends BasePollStateMixin {
   static start(
-    signalFunc: TabEvaluationScriptType,
+    signalFunc: WaiterSignalFunc,
     evaluateContext: Evaluable,
     pollInterval?: number,
-    timeOut?: number
+    timeOut?: number,
+    ...args: any[]
   ) {
     const handler = new WaitUntilReturnTrue(
       signalFunc,
       evaluateContext,
       pollInterval,
-      timeOut
+      timeOut,
+      args
     );
 
     return handler.start();
   }
 
   private constructor(
-    private signalFunc: TabEvaluationScriptType,
+    private signalFunc: WaiterSignalFunc,
     private evaluateContext: Evaluable,
     pollInterval: number = 100,
-    timeOut: number = 30000
+    timeOut: number = 30000,
+    private args?: any[]
   ) {
     super(pollInterval, timeOut);
   }
@@ -38,11 +46,20 @@ export default class WaitUntilReturnTrue extends BasePollStateMixin {
     );
   }
   protected async polling(): Promise<boolean> {
-    const func = evaluationFunctionProvider(this.signalFunc);
-    const state = await this.evaluateContext.evaluate(
-      `(async function(){const res = (${func})(); return !!res;})()`
-    );
+    if (this.args && this.args.length) {
+      const result = await this.evaluateContext.evaluate(
+        this.signalFunc,
+        ...this.args
+      );
 
-    return state;
+      return !!result;
+    } else {
+      const func = evaluationFunctionProvider(this.signalFunc);
+      const state = await this.evaluateContext.evaluate(
+        `(async function(){const res = (${func})(); return !!res;})()`
+      );
+
+      return state;
+    }
   }
 }

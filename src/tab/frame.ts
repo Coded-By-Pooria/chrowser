@@ -13,7 +13,9 @@ import TabNavigationOptions from './tabNavigationOptions';
 import WaitForSelectorAppearHandler from './tab_functionality/waitForSelectorAppearHandler';
 import WaitUntilNetworkIdleHandler from './tab_functionality/waitUntilNetworkIdle';
 import { evaluationFunctionProvider } from './helper';
-import WaitUntilReturnTrue from './tab_functionality/waitUntilReturnTrue';
+import WaitUntilReturnTrue, {
+  type WaiterSignalFunc,
+} from './tab_functionality/waitUntilReturnTrue';
 import { Waiter } from '../utils';
 import MouseHandler from './tabMouseHandler';
 
@@ -143,14 +145,16 @@ export default class Frame implements Evaluable, NodeROCreator {
   }
 
   async waitUntilReturnTrue(
-    script: string | TabEvaluateFunction,
-    options?: PollWaitForOptions
+    script: WaiterSignalFunc,
+    options?: PollWaitForOptions,
+    ...args: any[]
   ) {
     return WaitUntilReturnTrue.start(
       script,
       this,
       options?.pollInterval,
-      options?.waitTimeOut
+      options?.waitTimeOut,
+      ...args
     );
   }
 
