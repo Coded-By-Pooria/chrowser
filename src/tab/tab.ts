@@ -30,6 +30,7 @@ export default interface Tab extends Evaluable {
   ): Promise<void>;
   waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
   close(): Promise<void>;
+  bringToFront(): Promise<void>;
 }
 
 export class TabImpl implements Tab {
@@ -129,6 +130,11 @@ export class TabImpl implements Tab {
     ...args: any[]
   ) {
     return this.frame.waitUntilReturnTrue(script, options, ...args);
+  }
+
+  async bringToFront() {
+    await this.client.Page.enable();
+    await this.client.Page.bringToFront();
   }
 }
 

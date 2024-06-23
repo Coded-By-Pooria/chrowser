@@ -1,6 +1,6 @@
 {
   "name": "chrowser",
-  "version": "1.2.21",
+  "version": "1.2.22",
   "description": "A simple library to work on chrommium and scrape using it over cdp session",
   "main": "./chrowser.js",
   "types": "./chrowser.d.ts",
