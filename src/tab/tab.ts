@@ -31,6 +31,11 @@ export default interface Tab extends Evaluable {
   waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
   close(): Promise<void>;
   bringToFront(): Promise<void>;
+  screenshot(options: {
+    savePath: string;
+    format?: 'png' | 'webp' | 'jpeg';
+    quality?: number;
+  }): Promise<void>;
 }
 
 export class TabImpl implements Tab {
@@ -135,6 +140,24 @@ export class TabImpl implements Tab {
   async bringToFront() {
     await this.client.Page.enable();
     await this.client.Page.bringToFront();
+  }
+
+  async screenshot(options: {
+    savePath: string;
+    format?: 'png' | 'webp' | 'jpeg';
+    quality?: number;
+  }) {
+    await this.client.Page.enable();
+    const imageBuffer = (
+      await this.client.Page.captureScreenshot({
+        format: options.format,
+        quality: options.quality,
+      })
+    ).data;
+
+    (await import('fs')).writeFileSync(options.savePath, imageBuffer, {
+      encoding: 'base64',
+    });
   }
 }
 
