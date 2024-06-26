@@ -1,5 +1,6 @@
 import { LaunchedChrome, launch } from 'chrome-launcher';
 import TabHandler, { TabHandlerInterface } from './tab/tabHandler.js';
+import { fetchURL } from './utils.js';
 
 export interface BrowserOptions {
   args?: string[];
@@ -14,12 +15,14 @@ export default class Browser implements TabHandlerInterface {
     return browser;
   }
 
-  private constructor(private browserOptions?: BrowserOptions) {}
+  protected constructor(private browserOptions?: BrowserOptions) {}
 
   private window!: LaunchedChrome;
   private tabHandler!: TabHandler;
 
-  private async init() {
+  private _userAgent!: string;
+
+  protected async init() {
     const browserArgs = [];
 
     // if (this.browserOptions?.userDir?.trim()) {
@@ -36,7 +39,21 @@ export default class Browser implements TabHandlerInterface {
       chromeFlags: browserArgs,
       userDataDir: this.browserOptions?.userDir,
     });
-    this.tabHandler = await TabHandler.create(this.window.port);
+
+    let response = JSON.parse(
+      await fetchURL('http://localhost:' + this.window.port + '/json/version')
+    );
+
+    this._userAgent = response['User-Agent'];
+    this.tabHandler = await TabHandler.create(this);
+  }
+
+  get port() {
+    return this.window.port;
+  }
+
+  get userAgent() {
+    return this._userAgent;
   }
 
   async newTab(options: { url: string } = { url: '' }) {

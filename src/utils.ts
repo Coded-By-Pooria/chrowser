@@ -57,3 +57,34 @@ function escapeRegExp(str: string) {
 export function replaceAll(str: string, find: string, replace: string) {
   return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
 }
+
+import { PassThrough, Readable } from 'stream';
+import http from 'http';
+export async function fetchURL(url: string) {
+  const bridge = new PassThrough();
+
+  http
+    .get(url)
+    .on('response', (resp) => {
+      resp.pipe(bridge);
+    })
+    .end();
+
+  const result = await mergeData(bridge);
+  return result;
+}
+
+function mergeData(s: Readable): Promise<string> {
+  const segments: Buffer[] = [];
+  return new Promise((res, rej) => {
+    s.on('data', (d) => {
+      segments.push(Buffer.from(d));
+    })
+      .on('end', () => {
+        res(Buffer.concat(segments).toString('utf-8'));
+      })
+      .on('error', (err) => {
+        rej(err);
+      });
+  });
+}

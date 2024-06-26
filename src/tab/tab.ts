@@ -6,6 +6,7 @@ import type TabNavigationOptions from './tabNavigationOptions';
 import TabHandler from './tabHandler';
 import Frame from './frame';
 import { type WaiterSignalFunc } from './tab_functionality/waitUntilReturnTrue';
+import Browser from '../browser';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
 export type TabEvaluationScriptType<T = any, P = any> =
@@ -36,30 +37,15 @@ export default interface Tab extends Evaluable {
     savePath: string;
     format?: 'png' | 'webp' | 'jpeg';
     quality?: number;
+    totalPage?: boolean;
   }): Promise<void>;
 }
 
 export class TabImpl implements Tab {
-  // static async create(
-  //   tabId: string,
-  //   client: CDP.Client,
-  //   tabsHandler?: TabHandler
-  // ) {
-  //   await client.Page.enable();
-  //   const frameTree = await client.Page.getFrameTree();
-
-  //   return new TabImpl(
-  //     tabId,
-  //     frameTree.frameTree.frame.id,
-  //     client,
-  //     tabsHandler
-  //   );
-  // }
-
   constructor(
     private _tabId: string,
-    // private defaultFrameId: string,
     private client: CDP.Client,
+    private browser: Browser,
     private tabsHandler?: TabHandler
   ) {}
 
@@ -108,7 +94,7 @@ export class TabImpl implements Tab {
     await this.readyForFrame();
 
     try {
-      return this.#frame!.navigate(options);
+      return this.frame.navigate(options);
     } catch (err) {
       if (
         err instanceof Error &&
@@ -169,11 +155,13 @@ export class TabImpl implements Tab {
     savePath: string;
     format?: 'png' | 'webp' | 'jpeg';
     quality?: number;
+    totalPage?: boolean;
   }) {
     await this.client.Page.enable();
     const imageBuffer = (
       await this.client.Page.captureScreenshot({
         format: options.format,
+        captureBeyondViewport: options.totalPage,
         quality: options.quality,
       })
     ).data;
@@ -181,6 +169,10 @@ export class TabImpl implements Tab {
     (await import('fs')).writeFileSync(options.savePath, imageBuffer, {
       encoding: 'base64',
     });
+  }
+
+  get _session() {
+    return this.client;
   }
 }
 

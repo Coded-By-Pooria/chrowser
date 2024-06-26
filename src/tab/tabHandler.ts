@@ -1,16 +1,17 @@
 import CDP from 'chrome-remote-interface';
 import Tab, { TabImpl } from './tab';
+import Browser from '../browser';
 
 export interface TabHandlerInterface {
   newTab(options: { url: string }): Promise<Tab>;
 }
 
 export default class TabHandler {
-  static async create(chromeSessionPort: number) {
-    const session = await CDP({ port: chromeSessionPort });
+  static async create(browser: Browser) {
+    const session = await CDP({ port: browser.port });
     const defaultTabInfo = await session.Target.getTargetInfo();
 
-    const handler = new TabHandler(chromeSessionPort, {
+    const handler = new TabHandler(browser, {
       id: defaultTabInfo.targetInfo.targetId,
       session,
     });
@@ -18,12 +19,12 @@ export default class TabHandler {
   }
 
   private constructor(
-    private chromeSessionPort: number,
+    private browser: Browser,
     defaultTab: { session: CDP.Client; id: string }
   ) {
     this.openedTabs.set(
       defaultTab.id,
-      new TabImpl(defaultTab.id, defaultTab.session, this)
+      new TabImpl(defaultTab.id, defaultTab.session, browser, this)
     );
   }
 
@@ -36,16 +37,16 @@ export default class TabHandler {
       return this.openedTabs.values().next().value as Tab;
     }
     const newTabSession = await CDP.New({
-      port: this.chromeSessionPort,
+      port: this.browser.port,
       ...options,
     });
 
     const session = await CDP({
-      port: this.chromeSessionPort,
+      port: this.browser.port,
       target: newTabSession.id,
     });
 
-    const newTab = new TabImpl(newTabSession.id, session, this);
+    const newTab = new TabImpl(newTabSession.id, session, this.browser, this);
     this.openedTabs.set(newTab.tabId, newTab);
     return newTab;
   }
@@ -58,7 +59,7 @@ export default class TabHandler {
     this.openedTabs.delete(tab.tabId);
     return CDP.Close({
       id: tab.tabId,
-      port: this.chromeSessionPort,
+      port: this.browser.port,
     });
   }
 }
