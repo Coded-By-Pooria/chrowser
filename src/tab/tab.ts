@@ -26,8 +26,9 @@ export default interface Tab extends Evaluable {
     ...args: any[]
   ): Promise<void>;
   addScriptToRunOnNewDocument(
-    script: string | TabEvaluateFunction
-  ): Promise<void>;
+    script: string | TabEvaluateFunction,
+    ...args: any[]
+  ): Promise<string>;
   waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
   close(): Promise<void>;
   bringToFront(): Promise<void>;
@@ -39,11 +40,32 @@ export default interface Tab extends Evaluable {
 }
 
 export class TabImpl implements Tab {
+  // static async create(
+  //   tabId: string,
+  //   client: CDP.Client,
+  //   tabsHandler?: TabHandler
+  // ) {
+  //   await client.Page.enable();
+  //   const frameTree = await client.Page.getFrameTree();
+
+  //   return new TabImpl(
+  //     tabId,
+  //     frameTree.frameTree.frame.id,
+  //     client,
+  //     tabsHandler
+  //   );
+  // }
+
   constructor(
     private _tabId: string,
+    // private defaultFrameId: string,
     private client: CDP.Client,
-    private tabsHandler: TabHandler
+    private tabsHandler?: TabHandler
   ) {}
+
+  set handler(handler: TabHandler) {
+    this.tabsHandler = handler;
+  }
 
   evaluate(script: string | TabEvaluateFunction, ...args: any[]): Promise<any> {
     return this.frame.evaluate(script, ...args);
@@ -67,12 +89,11 @@ export class TabImpl implements Tab {
     return this.frame.$$evaluate(selector, handler);
   }
 
-  #frame?: Frame;
+  #frame!: Frame;
 
   private get frame() {
-    if (!this.#frame) {
-      throw new Error('Cannot access tab frame. Maybe no navigation happened.');
-    }
+    this.#frame ??= new Frame(this.client, this);
+
     return this.#frame;
   }
 
@@ -85,7 +106,6 @@ export class TabImpl implements Tab {
 
   async navigate(options: TabNavigationOptions): Promise<void> {
     await this.readyForFrame();
-    this.#frame ??= new Frame(this.client, this);
 
     try {
       return this.#frame!.navigate(options);
@@ -118,11 +138,14 @@ export class TabImpl implements Tab {
   }
 
   close(): Promise<void> {
-    return this.tabsHandler.close(this);
+    return this.tabsHandler!.close(this);
   }
 
-  addScriptToRunOnNewDocument(script: string | TabEvaluateFunction) {
-    return this.frame.addScriptToRunOnNewDocument(script);
+  addScriptToRunOnNewDocument(
+    script: string | TabEvaluateFunction,
+    ...args: any[]
+  ) {
+    return this.frame.addScriptToRunOnNewDocument(script, ...args);
   }
 
   async waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions) {

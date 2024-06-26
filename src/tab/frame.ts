@@ -12,7 +12,10 @@ import Tab, {
 import TabNavigationOptions from './tabNavigationOptions';
 import WaitForSelectorAppearHandler from './tab_functionality/waitForSelectorAppearHandler';
 import WaitUntilNetworkIdleHandler from './tab_functionality/waitUntilNetworkIdle';
-import { evaluationFunctionProvider } from './helper';
+import {
+  evaluationFunctionProvider,
+  serializeFunctionWithSerializableArgs,
+} from './helper';
 import WaitUntilReturnTrue, {
   type WaiterSignalFunc,
 } from './tab_functionality/waitUntilReturnTrue';
@@ -125,13 +128,23 @@ export default class Frame implements Evaluable, NodeROCreator {
 
   private framesDoc?: RemoteNodeDelegator<Document>;
 
-  async addScriptToRunOnNewDocument(script: string | TabEvaluateFunction) {
-    const serialazedFunc = evaluationFunctionProvider(script);
-    await this.context.send('Page.addScriptToEvaluateOnNewDocument', {
-      source: serialazedFunc,
-    });
+  async addScriptToRunOnNewDocument(
+    script: string | TabEvaluateFunction,
+    ...args: any[]
+  ) {
+    const serialazedFunc = serializeFunctionWithSerializableArgs(
+      script,
+      ...args
+    );
 
-    return;
+    const result = await this.context.send(
+      'Page.addScriptToEvaluateOnNewDocument',
+      {
+        source: serialazedFunc,
+      }
+    );
+
+    return result.identifier;
   }
 
   async waitForSelectorAppear(selector: string, options?: PollWaitForOptions) {
