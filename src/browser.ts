@@ -21,7 +21,7 @@ export default class Browser implements TabHandlerInterface {
   private tabHandler!: TabHandler;
 
   private _userAgent!: string;
-
+  private _version!: string;
   protected async init() {
     const browserArgs = [];
 
@@ -45,7 +45,12 @@ export default class Browser implements TabHandlerInterface {
     );
 
     this._userAgent = response['User-Agent'];
+    this._version = response['Browser'];
     this.tabHandler = await TabHandler.create(this);
+  }
+
+  get version() {
+    return this._version;
   }
 
   get port() {
