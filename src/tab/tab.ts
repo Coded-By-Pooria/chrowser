@@ -39,13 +39,14 @@ export default interface Tab extends Evaluable {
     quality?: number;
     totalPage?: boolean;
   }): Promise<void>;
+  browser: Browser;
 }
 
 export class TabImpl implements Tab {
   constructor(
     private _tabId: string,
     private client: CDP.Client,
-    private browser: Browser,
+    private _browser: Browser,
     private tabsHandler?: TabHandler
   ) {}
 
@@ -117,6 +118,10 @@ export class TabImpl implements Tab {
 
   get tabId() {
     return this._tabId;
+  }
+
+  get browser() {
+    return this._browser;
   }
 
   get mouseHandler() {
