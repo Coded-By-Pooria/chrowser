@@ -4,16 +4,17 @@ import RemoteNodeDelegator from './js_delegator/remoteNodeDelegator';
 import TabMouseHandler from './tabMouseHandler';
 import type TabNavigationOptions from './tabNavigationOptions';
 import TabHandler from './tabHandler';
-import Frame from './frame';
+import Frame, { FrameBase, FrameEvents } from './frame';
 import { type WaiterSignalFunc } from './tab_functionality/waitUntilReturnTrue';
 import Browser from '../browser';
+import { EventDataType, ListenCallback, Listener } from '@pourianof/notifier';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
 export type TabEvaluationScriptType<T = any, P = any> =
   | string
   | TabEvaluateFunction<T, P>;
 
-export default interface Tab extends Evaluable {
+export default interface Tab extends FrameBase {
   tabId: string;
   mouseHandler: TabMouseHandler;
   navigate(options: TabNavigationOptions): Promise<void>;
@@ -26,10 +27,6 @@ export default interface Tab extends Evaluable {
     options?: PollWaitForOptions,
     ...args: any[]
   ): Promise<void>;
-  addScriptToRunOnNewDocument(
-    script: string | TabEvaluateFunction,
-    ...args: any[]
-  ): Promise<string>;
   waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
   close(): Promise<void>;
   bringToFront(): Promise<void>;
@@ -49,6 +46,12 @@ export class TabImpl implements Tab {
     private _browser: Browser,
     private tabsHandler?: TabHandler
   ) {}
+  addListener<_E extends 'NavigateRequest' | 'NavigateDone'>(
+    eventName: _E,
+    data: ListenCallback<_E, EventDataType<FrameEvents, _E>>
+  ) {
+    return this.frame.addListener(eventName, data);
+  }
 
   set handler(handler: TabHandler) {
     this.tabsHandler = handler;

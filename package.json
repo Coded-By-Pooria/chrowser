@@ -13,6 +13,7 @@
   "author": "Pooria",
   "license": "ISC",
   "dependencies": {
+    "@pourianof/notifier": "^1.1.13",
     "chrome-launcher": "^1.1.1",
     "chrome-remote-interface": "^0.33.0"
   },

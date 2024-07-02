@@ -12,41 +12,68 @@ import Tab, {
 import TabNavigationOptions from './tabNavigationOptions';
 import WaitForSelectorAppearHandler from './tab_functionality/waitForSelectorAppearHandler';
 import WaitUntilNetworkIdleHandler from './tab_functionality/waitUntilNetworkIdle';
-import {
-  evaluationFunctionProvider,
-  serializeFunctionWithSerializableArgs,
-} from './helper';
+import { serializeFunctionWithSerializableArgs } from './helper';
 import WaitUntilReturnTrue, {
   type WaiterSignalFunc,
 } from './tab_functionality/waitUntilReturnTrue';
 import { Waiter } from '../utils';
 import MouseHandler from './tabMouseHandler';
-
-enum FrameNavigationState {
-  NONE,
-  REQUESTED_FOR_NAVIGATION,
-  NAVIGATE_FIRED,
-  NAVIGATE_DOC_EVENT,
-  NAVIGATE_LOAD_EVENT,
-}
+import Notifier, { BaseNotifier } from '@pourianof/notifier';
 
 export interface NodeROCreator {
   createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator;
 }
 
-export default class Frame implements Evaluable, NodeROCreator {
+export type FrameEvents = {
+  NavigateRequest: {
+    url: string;
+    reason: 'navigateMethod' | 'documentInnerAction';
+  };
+  NavigateDone: {
+    url?: string;
+  };
+};
+
+export interface FrameBase extends Evaluable, BaseNotifier<FrameEvents> {
+  navigate(options: TabNavigationOptions): Promise<void>;
+  waitForSelectorAppear(
+    selector: string,
+    options?: PollWaitForOptions
+  ): Promise<void>;
+  waitUntilReturnTrue(
+    script: WaiterSignalFunc,
+    options?: PollWaitForOptions,
+    ...args: any[]
+  ): Promise<void>;
+  addScriptToRunOnNewDocument(
+    script: string | TabEvaluateFunction,
+    ...args: any[]
+  ): Promise<string>;
+  waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
+}
+
+export default class Frame
+  extends Notifier<FrameEvents>
+  implements Evaluable, NodeROCreator, FrameBase
+{
   private frameNavigationWaitUntil: 'documentloaded' | 'load' =
     'documentloaded';
   private navigationWaiter?: Waiter;
   constructor(private context: CDP.Client, private tab: Tab) {
+    super();
     context.on('Page.frameNavigated', (p) => {
       if (p.frame.id === this.frameId && p.type === 'Navigation') {
+        this.trigger('NavigateDone');
         this.#executionContext = this.framesDoc = undefined;
       }
     });
 
     context.on('Page.frameRequestedNavigation', (p) => {
       if (p.frameId === this.frameId) {
+        this.trigger('NavigateRequest', {
+          url: p.url,
+          reason: 'documentInnerAction',
+        });
         this.framesDoc = this.#executionContext = undefined;
         this.navigationWaiter = Waiter.start();
       }
@@ -200,6 +227,10 @@ export default class Frame implements Evaluable, NodeROCreator {
   }
 
   async navigate(navOptions: TabNavigationOptions) {
+    this.trigger('NavigateRequest', {
+      url: navOptions.url,
+      reason: 'navigateMethod',
+    });
     const pageContext = this.context.Page;
 
     const navigateResult = await pageContext.navigate(navOptions);
@@ -227,6 +258,7 @@ export default class Frame implements Evaluable, NodeROCreator {
         }
         break;
     }
+    this.trigger('NavigateDone');
   }
 
   private frameId!: string;
