@@ -59,10 +59,10 @@ export default class WaitForSelectorAppearHandler extends BaseWaiterMixin {
     const passedTime = Date.now() - this.startTime;
     const remainToEnd = this.timeOut - passedTime;
     if (remainToEnd < 0) {
-      throw new WaitforSelectorAppearTimeoutException(
-        this.timeOut,
-        this.selector
+      this.waiterRejecter(
+        new WaitforSelectorAppearTimeoutException(this.timeOut, this.selector)
       );
+      return;
     }
     let timer: number;
     if (remainToEnd < this.pollInterval) {

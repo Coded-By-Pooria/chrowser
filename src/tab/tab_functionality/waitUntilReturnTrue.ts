@@ -39,7 +39,7 @@ export default class WaitUntilReturnTrue extends BasePollStateMixin {
   }
 
   protected onTimeOut() {
-    throw new WaitForSelector(
+    return new WaitForSelector(
       `Signal function doesn't return True value(even in implicit) for ${
         this.timeOut / 1000
       } seconds.(timeout)`

@@ -19,6 +19,7 @@ import WaitUntilReturnTrue, {
 import { Waiter } from '../utils';
 import MouseHandler from './tabMouseHandler';
 import Notifier, { BaseNotifier } from '@pourianof/notifier';
+import KeyboardHandler from './tabKeyboardHandler';
 
 export interface NodeROCreator {
   createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator;
@@ -143,6 +144,11 @@ export default class Frame
   private _mouseHandler?: MouseHandler;
   get mouseHandler() {
     return (this._mouseHandler ??= new MouseHandler(this.context.Input));
+  }
+
+  private _keyboardHandler?: KeyboardHandler;
+  get keyboardHandler() {
+    return (this._keyboardHandler ??= new KeyboardHandler(this.context.Input));
   }
 
   createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator {

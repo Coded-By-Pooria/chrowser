@@ -1,5 +1,4 @@
 import CDP from 'chrome-remote-interface';
-import Evaluable from './evaluable';
 import RemoteNodeDelegator from './js_delegator/remoteNodeDelegator';
 import TabMouseHandler from './tabMouseHandler';
 import type TabNavigationOptions from './tabNavigationOptions';
@@ -7,7 +6,8 @@ import TabHandler from './tabHandler';
 import Frame, { FrameBase, FrameEvents } from './frame';
 import { type WaiterSignalFunc } from './tab_functionality/waitUntilReturnTrue';
 import Browser from '../browser';
-import { EventDataType, ListenCallback, Listener } from '@pourianof/notifier';
+import { EventDataType, ListenCallback } from '@pourianof/notifier';
+import KeyboardHandler from './tabKeyboardHandler';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
 export type TabEvaluationScriptType<T = any, P = any> =
@@ -17,17 +17,7 @@ export type TabEvaluationScriptType<T = any, P = any> =
 export default interface Tab extends FrameBase {
   tabId: string;
   mouseHandler: TabMouseHandler;
-  navigate(options: TabNavigationOptions): Promise<void>;
-  waitForSelectorAppear(
-    selector: string,
-    options?: PollWaitForOptions
-  ): Promise<void>;
-  waitUntilReturnTrue(
-    script: WaiterSignalFunc,
-    options?: PollWaitForOptions,
-    ...args: any[]
-  ): Promise<void>;
-  waitUntilNetworkIdle(options: WaitUntilNetworkIdleOptions): Promise<void>;
+  keyboardHandler: KeyboardHandler;
   close(): Promise<void>;
   bringToFront(): Promise<void>;
   screenshot(options: {
@@ -129,6 +119,10 @@ export class TabImpl implements Tab {
 
   get mouseHandler() {
     return this.frame.mouseHandler;
+  }
+
+  get keyboardHandler() {
+    return this.frame.keyboardHandler;
   }
 
   close(): Promise<void> {

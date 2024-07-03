@@ -25,7 +25,8 @@ export default abstract class BasePollStateMixin extends BaseWaiterMixin {
     const passedTime = Date.now() - this.startTime;
     const remainToEnd = this.timeOut - passedTime;
     if (remainToEnd < 0) {
-      this.onTimeOut();
+      const err = this.onTimeOut();
+      this.waiterRejecter(err);
       return;
     }
     let timer: number;
@@ -37,7 +38,7 @@ export default abstract class BasePollStateMixin extends BaseWaiterMixin {
     setTimeout(() => this.poll(), timer);
   }
 
-  protected abstract onTimeOut(): any;
+  protected abstract onTimeOut(): Error;
 
   protected abstract polling(): Promise<boolean>;
 }

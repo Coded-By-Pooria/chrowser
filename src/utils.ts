@@ -2,7 +2,7 @@ export function randomBetween(a: number, b: number) {
   const lower = Math.min(a, b);
   const upper = Math.max(a, b);
 
-  return (upper - lower) * Math.random() + b;
+  return (upper - lower) * Math.random() + lower;
 }
 
 export function randomSign() {

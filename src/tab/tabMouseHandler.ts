@@ -4,6 +4,10 @@ import { sleep } from '../utils';
 export interface TabMouseBaseOptions {
   x: number;
   y: number;
+  tiltX?: number;
+  tiltY?: number;
+  mousePressure?: number;
+  tangentialPressure?: number;
 }
 
 export default class MouseHandler {
