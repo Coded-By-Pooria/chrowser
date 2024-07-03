@@ -36,6 +36,9 @@ export class TabImpl implements Tab {
     private _browser: Browser,
     private tabsHandler?: TabHandler
   ) {}
+  reload(): Promise<void> {
+    return this.frame.reload();
+  }
   addListener<_E extends 'NavigateRequest' | 'NavigateDone'>(
     eventName: _E,
     data: ListenCallback<_E, EventDataType<FrameEvents, _E>>

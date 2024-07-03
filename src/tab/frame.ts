@@ -41,6 +41,7 @@ export interface FrameBase extends Evaluable, BaseNotifier<FrameEvents> {
     selector: string,
     options?: PollWaitForOptions
   ): Promise<void>;
+  reload(): Promise<void>;
   waitUntilReturnTrue(
     script: WaiterSignalFunc,
     options?: PollWaitForOptions,
@@ -108,6 +109,9 @@ export default class Frame
       'executionContextCreated',
       this.contextCreationHandler.bind(this)
     );
+  }
+  reload(): Promise<void> {
+    return this.context.Page.reload();
   }
 
   private async waitForNavigationComplete() {
