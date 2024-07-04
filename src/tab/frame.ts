@@ -64,7 +64,7 @@ export default class Frame
   constructor(private context: CDP.Client, private tab: Tab) {
     super();
     context.on('Page.frameNavigated', (p) => {
-      if (p.frame.id === this.frameId && p.type === 'Navigation') {
+      if (p.frame.id === this.frameId && p.type !== 'Navigation') {
         this.trigger('NavigateDone');
         this.#executionContext = this.framesDoc = undefined;
       }
