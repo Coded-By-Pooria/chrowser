@@ -19,7 +19,11 @@ const config = [
       typescript({
         tsconfig: './tsconfig.json',
       }),
-      terser(),
+      terser({
+        compress: {
+          drop_console: ['log', 'info'],
+        },
+      }),
       copy({
         targets: [{ src: 'src/package.json', dest: destRootDir }],
       }),

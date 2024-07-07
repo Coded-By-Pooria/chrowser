@@ -176,11 +176,13 @@ export default class FrameNavigationHandler
   }
 
   async navigate(options: TabNavigationOptions) {
+    // TODO : Fix when navigate to same url and just
     const pageContext = this.context.Page;
 
     this.newNavigationDispatch(options.url, 'NavigationMethod');
 
     const navigateResult = await pageContext.navigate(options);
+    this.lastActiveNavigation?.done();
 
     if (this.frameId !== navigateResult.frameId) {
       this.frameId = navigateResult.frameId;
@@ -195,14 +197,12 @@ export default class FrameNavigationHandler
     switch (waitUntilOpt) {
       case 'documentloaded':
         {
-          await pageContext.domContentEventFired();
           await this.lastActiveNavigation!.whenDocumentLoaded();
         }
         break;
       case 'load':
         {
           await pageContext.loadEventFired();
-          this.lastActiveNavigation?.done();
         }
         break;
     }

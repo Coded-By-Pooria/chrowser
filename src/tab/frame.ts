@@ -87,16 +87,18 @@ export default class Frame
   private _navigationHandler!: FrameNavigationHandler;
 
   get navigationHandler() {
-    this._navigationHandler ??= new FrameNavigationHandler(
-      this.context,
-      this.frameId
-    );
+    if (!this._navigationHandler) {
+      this._navigationHandler = new FrameNavigationHandler(
+        this.context,
+        this.frameId
+      );
 
-    this._navigationHandler.addListener('NavigateRequest', (d) => {
-      d.data.whenComplete().then(() => {
-        this.framesDoc = undefined;
+      this._navigationHandler.addListener('NavigateRequest', (d) => {
+        d.data.whenComplete().then(() => {
+          this.framesDoc = undefined;
+        });
       });
-    });
+    }
 
     return this._navigationHandler;
   }
