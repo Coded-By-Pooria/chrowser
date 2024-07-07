@@ -8,6 +8,10 @@ import { type WaiterSignalFunc } from './tab_functionality/waitUntilReturnTrue';
 import Browser from '../browser';
 import { EventDataType, ListenCallback } from '@pourianof/notifier';
 import KeyboardHandler from './tabKeyboardHandler';
+import {
+  Navigatable,
+  WaitForPossibleNavigationOptions,
+} from './frameNavigationHandler';
 
 export type TabEvaluateFunction<T = any, P = any> = (...args: T[]) => P;
 export type TabEvaluationScriptType<T = any, P = any> =
@@ -39,7 +43,7 @@ export class TabImpl implements Tab {
   reload(): Promise<void> {
     return this.frame.reload();
   }
-  addListener<_E extends 'NavigateRequest' | 'NavigateDone'>(
+  addListener<_E extends 'NavigateRequest'>(
     eventName: _E,
     data: ListenCallback<_E, EventDataType<FrameEvents, _E>>
   ) {
@@ -106,6 +110,12 @@ export class TabImpl implements Tab {
 
       throw err;
     }
+  }
+
+  waitForPossibleNavigation(
+    options?: WaitForPossibleNavigationOptions
+  ): Promise<void> {
+    return this.frame.waitForPossibleNavigation(options);
   }
 
   async waitForSelectorAppear(selector: string, options?: PollWaitForOptions) {

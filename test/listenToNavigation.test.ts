@@ -1,4 +1,4 @@
-import Browser from '../src';
+import Browser from '../src/index';
 (async function () {
   const browser = await Browser.create();
 
@@ -6,11 +6,12 @@ import Browser from '../src';
 
   tab.addListener('NavigateRequest', (d) => {
     console.log('Request Navigation: ', d);
-  });
-
-  tab.addListener('NavigateDone', (d) => {
-    console.log('Navigation Done: ', d);
+    d.data.whenComplete().then((state) => {
+      console.log('State : ', state, '\n***\n');
+    });
   });
 
   await tab.navigate({ url: 'https://www.example.com' });
+
+  await tab.navigate({ url: 'https://www.another-site.com' });
 })();

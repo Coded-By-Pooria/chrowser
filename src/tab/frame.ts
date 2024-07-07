@@ -1,6 +1,11 @@
 import Protocol from 'devtools-protocol';
 import CDP from 'chrome-remote-interface';
-import NavigationException from '../exceptions/navigationException';
+import Notifier, {
+  BaseNotifier,
+  EventDataType,
+  ListenCallback,
+  Listener,
+} from '@pourianof/notifier';
 import Evaluable from './evaluable';
 import ExecutionContext from './session_contexts/executionContext';
 import RemoteNodeDelegator from './js_delegator/remoteNodeDelegator';
@@ -16,26 +21,24 @@ import { serializeFunctionWithSerializableArgs } from './helper';
 import WaitUntilReturnTrue, {
   type WaiterSignalFunc,
 } from './tab_functionality/waitUntilReturnTrue';
-import { Waiter } from '../utils';
 import MouseHandler from './tabMouseHandler';
-import Notifier, { BaseNotifier } from '@pourianof/notifier';
 import KeyboardHandler from './tabKeyboardHandler';
+import FrameNavigationHandler, {
+  Navigatable,
+  NavigationEvents,
+  WaitForPossibleNavigationOptions,
+} from './frameNavigationHandler';
 
 export interface NodeROCreator {
   createRO(ro: Protocol.Runtime.RemoteObject): RemoteNodeDelegator;
 }
 
-export type FrameEvents = {
-  NavigateRequest: {
-    url: string;
-    reason: 'navigateMethod' | 'documentInnerAction';
-  };
-  NavigateDone: {
-    url?: string;
-  };
-};
+export type FrameEvents = NavigationEvents;
 
-export interface FrameBase extends Evaluable, BaseNotifier<FrameEvents> {
+export interface FrameBase
+  extends Evaluable,
+    BaseNotifier<FrameEvents>,
+    Navigatable {
   navigate(options: TabNavigationOptions): Promise<void>;
   waitForSelectorAppear(
     selector: string,
@@ -58,43 +61,8 @@ export default class Frame
   extends Notifier<FrameEvents>
   implements Evaluable, NodeROCreator, FrameBase
 {
-  private frameNavigationWaitUntil: 'documentloaded' | 'load' =
-    'documentloaded';
-  private navigationWaiter?: Waiter;
   constructor(private context: CDP.Client, private tab: Tab) {
     super();
-    context.on('Page.frameNavigated', (p) => {
-      if (p.frame.id === this.frameId && p.type !== 'Navigation') {
-        this.trigger('NavigateDone');
-        this.#executionContext = this.framesDoc = undefined;
-      }
-    });
-
-    context.on('Page.frameRequestedNavigation', (p) => {
-      if (p.frameId === this.frameId) {
-        this.trigger('NavigateRequest', {
-          url: p.url,
-          reason: 'documentInnerAction',
-        });
-        this.framesDoc = this.#executionContext = undefined;
-        this.navigationWaiter = Waiter.start();
-      }
-    });
-
-    context.on('Page.domContentEventFired', (_) => {
-      if (
-        this.frameNavigationWaitUntil == 'documentloaded' &&
-        this.navigationWaiter
-      ) {
-        this.navigationWaiter.complete();
-      }
-    });
-    context.on('Page.domContentEventFired', (_) => {
-      if (this.frameNavigationWaitUntil == 'load' && this.navigationWaiter) {
-        this.navigationWaiter.complete();
-      }
-    });
-
     context.on('Runtime.executionContextDestroyed', (p) => {
       if (p.executionContextId === this.#executionContext?.executionContextId) {
         this.#executionContext = undefined;
@@ -110,15 +78,38 @@ export default class Frame
       this.contextCreationHandler.bind(this)
     );
   }
-  reload(): Promise<void> {
-    return this.context.Page.reload();
+  waitForPossibleNavigation(
+    options?: WaitForPossibleNavigationOptions
+  ): Promise<void> {
+    return this.navigationHandler.waitForPossibleNavigation(options);
   }
 
-  private async waitForNavigationComplete() {
-    if (this.navigationWaiter) {
-      await this.navigationWaiter;
-      this.navigationWaiter = undefined;
-    }
+  private _navigationHandler!: FrameNavigationHandler;
+
+  get navigationHandler() {
+    this._navigationHandler ??= new FrameNavigationHandler(
+      this.context,
+      this.frameId
+    );
+
+    this._navigationHandler.addListener('NavigateRequest', (d) => {
+      d.data.whenComplete().then(() => {
+        this.framesDoc = undefined;
+      });
+    });
+
+    return this._navigationHandler;
+  }
+
+  addListener<E extends 'NavigateRequest'>(
+    eventName: E,
+    data: ListenCallback<E, EventDataType<FrameEvents, E>>
+  ): Listener {
+    return this.navigationHandler.addListener(eventName, data);
+  }
+
+  reload(): Promise<void> {
+    return this.context.Page.reload();
   }
 
   #executionContext?: ExecutionContext;
@@ -224,7 +215,7 @@ export default class Frame
   }
 
   private async document() {
-    await this.waitForNavigationComplete();
+    await this.navigationHandler.waitForNavigationComplete();
     if (!this.#executionContext) {
       await this.waitForContext();
     }
@@ -236,39 +227,16 @@ export default class Frame
     ));
   }
 
+  private async evaluateFrameId() {
+    const frame = await this.context.Page.getFrameTree();
+    this.frameId = frame.frameTree.frame.id;
+  }
+
   async navigate(navOptions: TabNavigationOptions) {
-    this.trigger('NavigateRequest', {
-      url: navOptions.url,
-      reason: 'navigateMethod',
-    });
-    const pageContext = this.context.Page;
-
-    const navigateResult = await pageContext.navigate(navOptions);
-    this.#executionContext = this.framesDoc = undefined;
-
-    if (this.frameId !== navigateResult.frameId) {
-      this.frameId = navigateResult.frameId;
+    if (!this.frameId) {
+      await this.evaluateFrameId();
     }
-
-    if (navigateResult.errorText?.trim()) {
-      throw new NavigationException(navigateResult.errorText);
-    }
-
-    const waitUntilOpt = navOptions.waitUntil ?? 'documentloaded';
-
-    switch (waitUntilOpt) {
-      case 'documentloaded':
-        {
-          await pageContext.domContentEventFired();
-        }
-        break;
-      case 'load':
-        {
-          await pageContext.loadEventFired();
-        }
-        break;
-    }
-    this.trigger('NavigateDone');
+    return this.navigationHandler.navigate(navOptions);
   }
 
   private frameId!: string;
