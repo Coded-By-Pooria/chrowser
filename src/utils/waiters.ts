@@ -7,15 +7,21 @@ export class Waiter {
   private constructor() {}
 
   private waiterResolver!: () => any;
+  private waiterRejecter!: (err: any) => any;
   private waiterPromise!: Promise<void>;
   private start() {
-    this.waiterPromise = new Promise<void>((res, _) => {
+    this.waiterPromise = new Promise<void>((res, rej) => {
       this.waiterResolver = res;
+      this.waiterRejecter = rej;
     });
   }
 
-  complete() {
-    this.waiterResolver();
+  complete(err?: any) {
+    if (typeof err != 'undefined') {
+      this.waiterRejecter(err);
+    } else {
+      this.waiterResolver();
+    }
   }
 
   async then(callback: () => any) {

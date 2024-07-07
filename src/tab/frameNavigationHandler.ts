@@ -42,7 +42,8 @@ export interface NavigationObj {
 
   navigationType: NavigationType;
 
-  whenComplete: () => Promise<NavigationFinishState>;
+  whenComplete(): Promise<NavigationFinishState>;
+  whenDocumentLoaded(): Promise<void>;
 }
 
 export type NavigationEvents = {
@@ -141,11 +142,12 @@ export default class FrameNavigationHandler
     this.context.on('Page.domContentEventFired', this.onDocumentEvent);
   }
 
+  private navigateMethodDocumentLoadWaiter?: Waiter;
+
   private onDocumentEvent = () => {
     if (
       this.frameNavigationWaitUntil == 'documentloaded' &&
-      this.lastActiveNavigation &&
-      this.lastActiveNavigation.navigationType == 'DocumentInnerAction'
+      this.lastActiveNavigation
     ) {
       this.lastActiveNavigation?.documentLoaded();
     }
@@ -194,7 +196,7 @@ export default class FrameNavigationHandler
       case 'documentloaded':
         {
           await pageContext.domContentEventFired();
-          this.lastActiveNavigation!.documentLoaded();
+          await this.lastActiveNavigation!.whenDocumentLoaded();
         }
         break;
       case 'load':
@@ -297,6 +299,11 @@ class Navigation implements NavigationObj {
 
     this.state = NavigationState.CANCELED;
     this.completeNavigation();
+    if (!this.isDocumentLoaded) {
+      this.documentLoadingWaiter.complete(
+        new Error('Navigation canceled before document get loaded.')
+      );
+    }
   }
 
   async whenDocumentLoaded() {
