@@ -57,6 +57,10 @@ export default class Browser implements TabHandlerInterface {
     return this.window.port;
   }
 
+  get pid() {
+    return this.window.pid;
+  }
+
   get userAgent() {
     return this._userAgent;
   }
