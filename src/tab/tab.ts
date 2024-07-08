@@ -27,6 +27,7 @@ export default interface Tab extends FrameBase {
     totalPage?: boolean;
   }): Promise<void>;
   browser: Browser;
+  getTabTitle(): Promise<string>;
 }
 
 export class TabImpl implements Tab {
@@ -126,6 +127,11 @@ export class TabImpl implements Tab {
 
   get keyboardHandler() {
     return this.frame.keyboardHandler;
+  }
+
+  async getTabTitle() {
+    const targetInfo = await this._session.Target.getTargetInfo();
+    return targetInfo.targetInfo.title;
   }
 
   close(): Promise<void> {
